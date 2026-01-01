@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Car Essentials</title>
+  <meta name="description" content="Curated gear for car enthusiasts — maintenance, performance upgrades, and interior tech. Hand-picked product recommendations." />
+  <meta name="theme-color" content="#302b63" />
+  <style>
+    /* Skip link + focus styles for accessibility */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+    .skip-link:focus {
+      position: static;
+      left: 0;
+      width: auto;
+      height: auto;
+      background: #ff6b00;
+      color: #fff;
+      padding: 8px 12px;
+      z-index: 9999;
+      border-radius: 4px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container { max-width: 1000px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 40px; padding: 48px 20px 28px; }
+    h1 {
+      font-size: 2.6rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(255,107,0,0.5);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .subtitle { font-size: 1.05rem; opacity: .95; color: #ff6b00; font-weight: 600; }
+
+    .category-section { margin-bottom: 40px; }
+    .category-title {
+      color: #ff6b00;
+      font-size: 1.6rem;
+      margin-bottom: 18px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .product-card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(8px);
+      border: 2px solid rgba(255,107,0,0.28);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .product-card:focus-within,
+    .product-card:hover {
+      transform: translateY(-6px);
+      border-color: #ff6b00;
+      box-shadow: 0 12px 32px rgba(255,107,0,0.14);
+    }
+
+    .product-image {
+      width: 100%;
+      height: 220px;
+      background: linear-gradient(135deg,#434343 0%,#000 100%);
+      display:flex; align-items:center; justify-content:center;
+      font-size: 4rem;
+      border-bottom: 3px solid #ff6b00;
+    }
+
+    .product-content { padding: 20px; }
+    .product-title { font-size: 1.15rem; margin-bottom: 8px; color: #fff; font-weight: 700; }
+    .product-description { color: #d3d3d3; line-height: 1.6; margin-bottom: 14px; font-size: .95rem; }
+
+    .cta-button {
+      display:inline-block;
+      width:100%;
+      padding:12px 14px;
+      background: linear-gradient(135deg,#ff6b00 0%,#ff4500 100%);
+      color:#fff; text-decoration:none; border-radius:8px; font-weight:700; font-size:1rem;
+      text-transform:uppercase; letter-spacing:1px; text-align:center;
+      transition: transform .16s ease, box-shadow .16s ease;
+    }
+    .cta-button:focus,
+    .cta-button:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(255,107,0,0.35); outline: none; }
+
+    .bio-link {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255,107,0,0.3);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+      margin-top: 12px;
+    }
+    .bio-link h2 { color:#ff6b00; margin-bottom:10px; font-size:1.25rem; text-transform:uppercase; }
+    .bio-link p { color:#cfcfcf; line-height:1.6; margin-bottom:12px; }
+
+    .social-links { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .social-button { padding:10px 14px; background:linear-gradient(135deg,#ff6b00 0%,#ff4500 100%); color:#fff; border-radius:8px; text-decoration:none; font-weight:700; text-transform:uppercase; }
+
+    @media (max-width:768px) {
+      h1 { font-size: 1.75rem; }
+      .product-image { height:180px; font-size:3.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <div class="container">
+    <header role="banner" aria-labelledby="site-title">
+      <h1 id="site-title">🏎️ My Car Essentials</h1>
+      <p class="subtitle">Gear That Every Car Enthusiast Needs</p>
+    </header>
+
+    <main id="main-content" role="main">
+      <!-- Only items with real links kept -->
+      <section class="category-section" aria-labelledby="maintenance-title">
+        <h2 id="maintenance-title" class="category-title">🔧 Maintenance & Care</h2>
+        <div class="products-grid" role="list">
+          <article class="product-card" role="listitem" aria-labelledby="p1-title">
+            <div class="product-image" role="img" aria-label="Premium Car Wash Kit">🧼</div>
+            <div class="product-content">
+              <h3 id="p1-title" class="product-title">Premium Car Wash Kit</h3>
+              <p class="product-description">The best car wash soap and microfiber towels I've used. Keeps my paint looking showroom fresh without scratching.</p>
+              <a class="cta-button"
+                 href="https://amzn.to/44RXOSA"
+                 target="_blank"
+                 rel="noopener noreferrer nofollow sponsored"
+                 aria-label="Shop Premium Car Wash Kit (opens in new tab)">
+                Shop Now →
+              </a>
+            </div>
+          </article>
+
+          <article class="product-card" role="listitem" aria-labelledby="p2-title">
+            <div class="product-image" role="img" aria-label="LED Inspection Light">🔦</div>
+            <div class="product-content">
+              <h3 id="p2-title" class="product-title">LED Inspection Light</h3>
+              <p class="product-description">Essential for any garage work. Super bright, rechargeable, and magnetic mount makes under-the-hood work so much easier.</p>
+              <a class="cta-button"
+                 href="https://amzn.to/3YQrdca"
+                 target="_blank"
+                 rel="noopener noreferrer nofollow sponsored"
+                 aria-label="Shop LED Inspection Light (opens in new tab)">
+                Shop Now →
+              </a>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bio-link" role="contentinfo" aria-label="Follow on social">
+      <h2>Follow My Builds & Reviews</h2>
+      <p>Join me on Instagram for car mods, maintenance tips, product reviews, and behind-the-scenes content from the garage. New posts every week!</p>
+      <div class="social-links">
+        <a class="social-button"
+           href="https://www.instagram.com/vualtvibes/"
+           target="_blank"
+           rel="noopener noreferrer"
+           aria-label="Visit vualtvibes on Instagram (opens in new tab)">
+          📸 Follow on Instagram
+        </a>
+      </div>
+
+      <p style="margin-top:12px;color:#bfbfbf;font-size:.9rem;">
+        Note: Some links are affiliate links and I may earn a commission at no extra cost to you.
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
