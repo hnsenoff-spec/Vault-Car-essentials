@@ -69,6 +69,7 @@
       sites, leaders, intel, intelNext, routineNext,
       missiles: [], nextMissile: 1, nextWave: 1, detonations: [],
       timers: [], aiCooldown: {}, readinessSeen: {},
+      lastStmt: {}, stmtNext: Object.fromEntries(SIDE_IDS.map((i) => [i, rand(20, 40)])),
       log: [], nextMsg: 1,
     };
   }
@@ -81,14 +82,31 @@
     return { abbr: L.abbr, title: L.title, airborne: L.airborneCallsign, convoy: L.convoyCallsign, net: L.commsNet, side: sd.short, ...extra };
   }
   function post(type, text, visibleTo, meta) {
-    const m = { id: S.nextMsg++, t: S.t, type, text, vis: new Set(visibleTo), conf: meta && meta.conf };
+    const m = { id: S.nextMsg++, t: S.t, type, text, vis: new Set(visibleTo), conf: meta && meta.conf, side: meta && meta.side, spin: meta && meta.spin };
     S.log.push(m);
     if (S.log.length > LOG_CAP) S.log.splice(0, S.log.length - LOG_CAP);
-    if (m.vis.has(S.perspective)) Feed.add(m);
+    Feed.add(m);
   }
   function say(type, key, side, visibleTo, extra, meta) {
     post(type, CFG.fill(key, vars(side, extra || {})), visibleTo, meta);
   }
+
+  /**
+   * Public statement from a side's capital, heard by every perspective.
+   * `spin(L)` is evaluated when the statement airs: true = the line is false.
+   */
+  function statement(side, key, extra, spin, force) {
+    after(rand(...CFG.TIMING.statementDelay), () => {
+      const L = S.leaders[side];
+      if (!force && S.t - (S.lastStmt[side] ?? -1e9) < CFG.TIMING.statementGap) return;
+      S.lastStmt[side] = S.t;
+      const sd = SIDES[side];
+      const line = CFG.fill(key, { title: sd.leader.title, side: sd.short, ...extra });
+      post('statement', `${sd.leader.spokesperson}, ${sd.sites.capital.name}: \u201C${line}\u201D`, ALL_P,
+        { side, spin: spin ? !!spin(L) : false });
+    });
+  }
+  const notInCapital = (L) => L.location !== 'capital' || !!L.move;
 
   function locLabel(loc) { return CFG.LOCATIONS[loc].label; }
   function statusLabel(st) { return CFG.STATUSES[st].label; }
@@ -122,6 +140,7 @@
     const from = siteNameOf(L);
     startMove(side, [site.lon, site.lat], 'bunker');
     say('relocation', 'sealStart', side, truthTo(side), { from, site: site.name });
+    if (Math.random() < 0.7) statement(side, 'stmtLeaderInCapital', {}, notInCapital);
     scheduleIntel(side);
   }
 
@@ -133,6 +152,7 @@
     if (ab.destroyed) return say('warning', 'airbaseDown', side, truthTo(side), { airbase: ab.name });
     startMove(side, [ab.lon, ab.lat], 'airbase');
     say('relocation', 'scrambleStart', side, truthTo(side), { airbase: ab.name });
+    if (Math.random() < 0.7) statement(side, 'stmtLeaderInCapital', {}, notInCapital);
     scheduleIntel(side);
   }
 
@@ -180,6 +200,7 @@
     // Observers notice escalation once per new low-water mark, not per click.
     if (level < prev && level <= 3 && level < (S.readinessSeen[side] || 6)) {
       S.readinessSeen[side] = level;
+      statement(side, 'stmtReadiness', { defcon: level });
       for (const o of othersOf(side)) {
         after(rand(10, 20), () => say('routine', 'intelReadiness', side, [o], {}, { conf: Math.round(rand(50, 85)) }));
       }
@@ -223,6 +244,11 @@
     for (const o of othersOf(m.side)) say('critical', 'launchDetected', m.side, [o], { n: m.waveN });
     say('warning', 'incoming', m.target, [m.target], { target: S.sites[m.targetKey].name });
     S.leaders[m.target].lastAttacker = m.side;
+    statement(m.target, 'stmtCondemn', { enemy: SIDES[m.side].publicName }, null, true);
+    statement(m.side, 'stmtOwnLaunch', { enemy: SIDES[m.target].publicName }, null, true);
+    for (const o of SIDE_IDS) {
+      if (o !== m.side && o !== m.target) statement(o, 'stmtRestraint', { a: SIDES[m.side].short, b: SIDES[m.target].short });
+    }
     aiReact(m);
   }
 
@@ -289,6 +315,7 @@
         if (Math.random() < SIDES[m.target].interceptP) {
           m.intercept = 'killed'; m.state = 'intercepted'; m.endT = S.t; m.endP = p;
           say('warning', 'interceptKill', m.target, ALL_P, { id: missileName(m) });
+          statement(m.target, 'stmtIntercept', {});
           continue;
         }
         m.intercept = 'leaker';
@@ -305,6 +332,7 @@
     S.detonations.push({ pos: m.to, t: S.t, rt: performance.now() });
     if (!tgt.destroyed && dist(m.to, [tgt.lon, tgt.lat]) < 2) { tgt.destroyed = true; staticDirty = true; }
     say('critical', 'detonation', tgt.side, ALL_P, { site: tgt.name });
+    statement(tgt.side, 'stmtStrikeOnUs', { site: tgt.name }, null, true);
     for (const s of SIDE_IDS) setDefcon(s, 1, true);
     for (const s of SIDE_IDS) {
       const L = S.leaders[s];
@@ -342,6 +370,7 @@
     if (L.status === 'unknown') return;
     L.status = 'unknown';
     say('critical', 'contactLost', side, truthTo(side), { site: siteNameOf(L) });
+    statement(side, 'stmtLeaderSafe', {}, (x) => x.status === 'unknown', true);
     scheduleIntel(side);
     if (L.perimeter) armPerimeterCountdown(side);
     after(rand(...CFG.TIMING.unknownRecovery), () => {
@@ -456,6 +485,11 @@
 
   function tickPeriodic() {
     for (const side of SIDE_IDS) {
+      if (S.t >= S.stmtNext[side]) {
+        S.stmtNext[side] = S.t + rand(...CFG.TIMING.statementCalm);
+        if (S.defcon[side] >= 4) statement(side, 'stmtCalm', {});
+        else if (Math.random() < 0.5) statement(side, 'stmtLeaderInCapital', {}, notInCapital);
+      }
       if (S.t >= S.routineNext[side]) {
         S.routineNext[side] = S.t + rand(...CFG.TIMING.routineOwn);
         const L = S.leaders[side];
@@ -623,18 +657,24 @@
   }
 
   // ---------- feed ----------
-  const TYPE_BADGE = { routine: '· RTN', relocation: '➜ MOV', warning: '▲ WRN', critical: '✹ CRIT' };
+  const TYPE_BADGE = { routine: '· RTN', relocation: '➜ MOV', warning: '▲ WRN', critical: '✹ CRIT', statement: '❝ STMT' };
   const Feed = {
-    paused: false, pending: 0,
+    paused: false, pending: 0, showStmt: true,
+    shows(m) { return m.vis.has(S.perspective) && (this.showStmt || m.type !== 'statement'); },
     el: null,
     node(m, fresh) {
       const li = document.createElement('li');
       li.className = 't-' + m.type + (fresh && !reduceMotion ? ' new' : '');
+      if (m.side) li.style.setProperty('--side', SIDES[m.side].color);
+      // Only the issuing side and the Observer know a public line is false.
+      const spin = m.spin && (S.perspective === 'OBS' || S.perspective === m.side)
+        ? '<span class="conf spin" title="Contradicts ground truth">SPIN</span>' : '';
       li.innerHTML = `<time>[T+${fmtT(m.t)}]</time><span class="badge">${TYPE_BADGE[m.type]}</span>` +
-        `<span class="txt">${esc(m.text)}${m.conf != null ? `<span class="conf" title="Report confidence">CONF ${m.conf}%</span>` : ''}</span>`;
+        `<span class="txt">${esc(m.text)}${spin}${m.conf != null ? `<span class="conf" title="Report confidence">CONF ${m.conf}%</span>` : ''}</span>`;
       return li;
     },
     add(m) {
+      if (!this.shows(m)) return;
       if (this.paused) { this.pending++; this.updateBtn(); return; }
       const empty = this.el.querySelector('.feed-empty');
       if (empty) empty.remove();
@@ -643,7 +683,7 @@
       this.updateCount();
     },
     rebuild() {
-      const msgs = S.log.filter((m) => m.vis.has(S.perspective)).slice(-FEED_CAP).reverse();
+      const msgs = S.log.filter((m) => this.shows(m)).slice(-FEED_CAP).reverse();
       this.el.innerHTML = '';
       if (!msgs.length) this.el.innerHTML = '<li class="feed-empty">No traffic yet. Try SEAL BUNKER or SCRAMBLE AIRBORNE POST.</li>';
       const frag = document.createDocumentFragment();
@@ -657,7 +697,7 @@
     updateBtn() {
       const b = $('#btnFeedPause');
       b.setAttribute('aria-pressed', String(this.paused));
-      b.textContent = this.paused ? `▶ RESUME${this.pending ? ` (${this.pending} new)` : ''}` : '❚❚ HOLD SCROLL';
+      b.textContent = this.paused ? `▶ RESUME${this.pending ? ` (${this.pending})` : ''}` : '❚❚ HOLD';
     },
     toggle() { this.paused = !this.paused; if (!this.paused) this.rebuild(); else this.updateBtn(); },
   };
@@ -893,6 +933,11 @@
     wire($('#btnInject'), injectAdversaryLaunch);
     wire($('#btnReset'), reset);
     $('#btnFeedPause').addEventListener('click', () => Feed.toggle());
+    $('#btnStmt').addEventListener('click', (e) => {
+      Feed.showStmt = !Feed.showStmt;
+      e.currentTarget.setAttribute('aria-pressed', String(Feed.showStmt));
+      Feed.rebuild();
+    });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { disarmAll(); announce('Confirmation cancelled.'); }

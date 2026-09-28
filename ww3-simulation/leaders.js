@@ -20,6 +20,7 @@
   const SIDES = {
     US: {
       name: 'United States',
+      publicName: 'the United States',   // used in capital statements
       short: 'US',
       glyph: '▲',
       color: '#6fa8ff',
@@ -29,6 +30,7 @@
         airborneCallsign: 'NIGHTWATCH-1',
         convoyCallsign: 'MOTORCADE SIERRA',
         commsNet: 'CROSSBOW NET',
+        spokesperson: 'US Government Spokesperson',
       },
       sites: {
         capital: { name: 'CAPITAL EAST',    kind: 'capital', lon: -77.0,  lat: 38.9 },
@@ -43,6 +45,7 @@
     },
     RU: {
       name: 'Russian Federation',
+      publicName: 'the Russian Federation',
       short: 'RU',
       glyph: '■',
       color: '#c49bff',
@@ -52,6 +55,7 @@
         airborneCallsign: 'SKYPOST-7',
         convoyCallsign: 'COLUMN VOLGA',
         commsNet: 'BIRCH NET',
+        spokesperson: 'Russian Government Spokesperson',
       },
       sites: {
         capital: { name: 'CAPITAL NORTH',  kind: 'capital', lon: 37.6, lat: 55.8 },
@@ -66,6 +70,7 @@
     },
     CN: {
       name: "People's Republic of China",
+      publicName: "the People's Republic of China",
       short: 'PRC',
       glyph: '◆',
       color: '#6fe0a4',
@@ -75,6 +80,7 @@
         airborneCallsign: 'CRANE-3',
         convoyCallsign: 'CONVOY JADE',
         commsNet: 'LOTUS NET',
+        spokesperson: 'PRC Foreign Ministry Spokesperson',
       },
       sites: {
         capital: { name: 'CAPITAL CENTRAL',  kind: 'capital', lon: 116.4, lat: 39.9 },
@@ -188,6 +194,44 @@
     intelDecoys: ['[IMINT] {n}+ convoy signatures dispersing from {site}. Principal position ambiguous.'],
     intelPerimeter: ['[INTEL] Indicators {side} has placed automated retaliation on hair trigger.'],
     intelReadiness: ['[INTEL] {side} force readiness indicators rising.'],
+
+    // --- public statements from each capital (heard by EVERY perspective) ---
+    // Rendered as: SPOKESPERSON, CAPITAL: "<line>". Public lines can be spin:
+    // the Observer view and the issuing side see a SPIN tag when they are false.
+    stmtCalm: [
+      'The government is monitoring the international situation closely. There is no cause for alarm.',
+      'Our posture is defensive and unchanged. We call on all parties to show restraint.',
+    ],
+    stmtReadiness: [                                         // {defcon}
+      'Precautionary readiness measures are under way. These steps are defensive in nature.',
+      'Our forces have moved to a higher state of readiness as a prudent precaution.',
+    ],
+    stmtLeaderInCapital: [                                   // spin when leader is moving
+      'The {title} remains in the capital and is directing the government personally.',
+      'Rumours that the leadership has left the capital are false. It is business as usual.',
+    ],
+    stmtLeaderSafe: [                                        // after contact lost
+      'Reports concerning the {title} are false. Command and control is fully intact.',
+      'The leadership is safe and in command. We urge the public to ignore speculation.',
+    ],
+    stmtCondemn: [                                           // {enemy}
+      'We have detected hostile launches from {enemy}. Any attack will be met with a decisive response.',
+      'This is an act of aggression by {enemy}. We reserve every right to respond.',
+    ],
+    stmtOwnLaunch: [                                         // {enemy}
+      'Our forces have conducted a limited and proportionate action against military targets in {enemy}.',
+      'In response to the threat from {enemy}, a measured defensive strike has been carried out.',
+    ],
+    stmtRestraint: [                                         // {a} {b}
+      'We are deeply alarmed by the exchange between {a} and {b} and call for an immediate halt.',
+      'Our country is not a party to this conflict. We urge {a} and {b} to step back from the brink.',
+    ],
+    stmtStrikeOnUs: [                                        // {site}
+      'An attack has struck {site}. Emergency services are responding. The nation will not be intimidated.',
+    ],
+    stmtIntercept: [
+      'Our air defences have successfully destroyed an incoming threat.',
+    ],
   };
 
   /* Fog-of-war model: how sure the OTHER sides are about this leader. */
@@ -209,6 +253,9 @@
     commsRecovery: [40, 70],
     unknownRecovery: [80, 120],
     perimeterDelay: 20,
+    statementDelay: [8, 20],    // capitals take a while to go public
+    statementGap: 18,           // min sim s between statements from one capital
+    statementCalm: [90, 150],   // periodic calm/readiness line
   };
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }

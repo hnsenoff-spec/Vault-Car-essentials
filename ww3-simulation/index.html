@@ -75,6 +75,7 @@
   button:active:not(:disabled) { transform: translateY(1px); background: #0f1a24; }
   button:disabled { opacity: .4; cursor: not-allowed; }
   button[aria-pressed="true"] { background: var(--cyan-dim); color: #031014; border-color: var(--cyan); }
+  button[aria-pressed="true"]:hover:not(:disabled) { background: var(--cyan); color: #031014; }
   .btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .btn-block { width: 100%; text-align: left; display: flex; align-items: center; gap: 8px; padding: 9px 10px; }
   .btn-block .ico { width: 1.4em; text-align: center; }
@@ -141,7 +142,7 @@
   /* ---------- feed ---------- */
   .feed-panel { flex: 1.4; display: flex; flex-direction: column; min-height: 200px; }
   .feed-head-ctrl { display: flex; gap: 6px; align-items: center; }
-  .feed-head-ctrl button { padding: 4px 8px; font-size: 11px; }
+  .feed-head-ctrl button { padding: 4px 8px; font-size: 11px; white-space: nowrap; }
   #feed {
     list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0;
     font: 12px/1.4 var(--mono); border-top: 1px solid #16303a;
@@ -160,6 +161,9 @@
   #feed .t-relocation { border-left-color: var(--cyan); } #feed .t-relocation .badge { color: var(--cyan); }
   #feed .t-warning { border-left-color: var(--amber); background: rgba(255,176,32,.04); } #feed .t-warning .badge { color: var(--amber); }
   #feed .t-critical { border-left-color: var(--red); background: rgba(255,59,59,.07); } #feed .t-critical .badge { color: var(--red); } #feed .t-critical .txt { color: #ffdcdc; }
+  #feed .t-statement { border-left-color: var(--side, #b8c7ff); background: rgba(184,199,255,.05); }
+  #feed .t-statement .badge { color: var(--side, #b8c7ff); } #feed .t-statement .txt { color: #e6ecf5; font-style: italic; }
+  #feed .conf.spin { color: #ff9a4d; border-style: solid; font-style: normal; }
   .feed-empty { color: var(--muted); padding: 10px; font: 12px var(--mono); }
 
   /* ---------- leadership + telemetry ---------- */
@@ -350,7 +354,8 @@
     <div class="panel feed-panel">
       <h2>Leadership Comms <span class="feed-head-ctrl">
         <span class="sub" id="feedCount">0</span>
-        <button id="btnFeedPause" aria-pressed="false">❚❚ HOLD SCROLL</button>
+        <button id="btnStmt" aria-pressed="true" title="Show or hide public statements from each capital" aria-label="Show capital statements">❝ STMT</button>
+        <button id="btnFeedPause" aria-pressed="false" aria-label="Hold scroll">❚❚ HOLD</button>
       </span></h2>
       <ul id="feed" role="log" aria-live="polite" aria-relevant="additions" aria-label="Radio chatter, newest first"></ul>
     </div>
