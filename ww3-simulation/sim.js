@@ -12,6 +12,7 @@
   const ALL_P = [...SIDE_IDS, 'OBS'];
   const DEFCON_NAMES = { 5: 'FADE OUT', 4: 'DOUBLE TAKE', 3: 'ROUND HOUSE', 2: 'FAST PACE', 1: 'COCKED PISTOL' };
   const PHASE = { boostEnd: 0.12, termStart: 0.85 };
+  const RL = CFG.REALISM;
   const FEED_CAP = 100;
   const LOG_CAP = 800;
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -68,7 +69,7 @@
       interceptors: Object.fromEntries(SIDE_IDS.map((i) => [i, SIDES[i].interceptors])),
       sites, leaders, intel, intelNext, routineNext,
       missiles: [], nextMissile: 1, nextWave: 1, detonations: [],
-      timers: [], aiCooldown: {}, readinessSeen: {},
+      timers: [], readinessSeen: {},
       lastStmt: {}, stmtNext: Object.fromEntries(SIDE_IDS.map((i) => [i, rand(20, 40)])),
       log: [], nextMsg: 1,
     };
@@ -125,7 +126,7 @@
   function startMove(side, to, dest) {
     const L = S.leaders[side];
     L.gen++;
-    L.move = { from: [...L.pos], to, t0: S.t, dur: clamp(dist(L.pos, to) * 4, 18, 55), dest };
+    L.move = { from: [...L.pos], to, t0: S.t, dur: clamp(dist(L.pos, to) * RL.relocatePerDeg, RL.relocateMin, RL.relocateMax), dest };
     L.orbit = null;
     L.location = 'convoy';
     L.site = null;
@@ -222,10 +223,10 @@
       const from = [f.lon + rand(-0.8, 0.8), f.lat + rand(-0.5, 0.5)];
       const to = [tgt.lon + rand(-0.5, 0.5), tgt.lat + rand(-0.3, 0.3)];
       const t0 = S.t + i * 2.5;
-      const dur = 110 + dist(from, to) * 0.9 + rand(-5, 5);
+      const dur = RL.flightBase + dist(from, to) * RL.flightPerDeg + rand(-5, 5);
       const m = {
         id: S.nextMissile++, side, target: tgt.side, targetKey, from, to, t0, dur,
-        detectT: t0 + dur * 0.05, detected: false, intercept: 'none', state: 'flight',
+        detectT: t0 + RL.detectDelay, detected: false, intercept: 'none', state: 'flight',
         endT: null, endP: null, wave, first: i === 0, waveN: n,
       };
       m.g = arcGeom(m);
@@ -259,23 +260,24 @@
     // Targeted side's leadership moves.
     if (aiControlled(t)) {
       const L = S.leaders[t];
-      after(rand(3, 8), () => {
+      after(rand(...RL.leaderReact), () => {
         if (L.status === 'unknown') return;
         if (L.location === 'capital' && !L.move) (Math.random() < 0.5 ? sealBunker : scrambleAirborne)(t);
         if (!L.decoys.length && Math.random() < 0.65) after(rand(4, 10), () => deployDecoys(t));
-        if (!L.perimeter && Math.random() < 0.35) after(rand(6, 14), () => togglePerimeter(t));
+        if (!L.perimeter && Math.random() < RL.perimeterArmP * SIDES[t].autoRetaliationP / 0.8) after(rand(6, 14), () => togglePerimeter(t));
       });
-      // Retaliation, rate-limited per attacker pair.
-      const key = t + '>' + m.side;
-      if ((S.aiCooldown[key] || -1) <= S.t) {
-        S.aiCooldown[key] = S.t + 90;
-        after(rand(15, 30), () => {
-          if (!aiControlled(t) || S.leaders[t].status === 'unknown') return;
-          setDefcon(t, 2, true);
+      // Retaliation: every detected wave gets an answer decided inside the warning window.
+      if (Math.random() < RL.retaliateP) {
+        after(rand(...RL.decisionDelay), () => {
+          if (!aiControlled(t)) return;
+          // A silent leader can still be answered via pre-delegation / automated systems.
+          if (S.leaders[t].status === 'unknown' && Math.random() > SIDES[t].autoRetaliationP) return;
+          setDefcon(t, 1, true);
           const targets = Object.values(S.sites).filter((s) => s.side === m.side && !s.destroyed);
           if (!targets.length) return;
           const fields = targets.filter((s) => s.kind === 'field');
-          launch(t, pick(fields.length && Math.random() < 0.6 ? fields : targets).key, Math.ceil(rand(0.01, 2)), false);
+          const n = m.waveN + (Math.random() < RL.escalateP ? 1 : 0);
+          launch(t, pick(fields.length && Math.random() < 0.6 ? fields : targets).key, n, false);
         });
       }
     }

@@ -39,9 +39,10 @@
         fieldA:  { name: 'FIELD NORTH-1',   kind: 'field',   lon: -103.0, lat: 47.5 },
         fieldB:  { name: 'FIELD PLAINS-2',  kind: 'field',   lon: -106.0, lat: 42.0 },
       },
-      inventory: 10,
-      interceptors: 6,
-      interceptP: 0.5,
+      inventory: 10,        // ~1,770 deployed warheads (FAS 2025) -> scale 10
+      interceptors: 2,      // 44 GMD interceptors vs ~1,700 incoming warheads: tiny share
+      interceptP: 0.55,     // GMD test record ~55% (MDA / UCS scoring)
+      autoRetaliationP: 0.5, // pre-delegation / surviving commanders if leader is lost
     },
     RU: {
       name: 'Russian Federation',
@@ -64,9 +65,10 @@
         fieldA:  { name: 'FIELD TAIGA-1',  kind: 'field',   lon: 65.0, lat: 57.5 },
         fieldB:  { name: 'FIELD STEPPE-2', kind: 'field',   lon: 84.0, lat: 53.5 },
       },
-      inventory: 10,
-      interceptors: 4,
-      interceptP: 0.45,
+      inventory: 10,        // ~1,718 deployed warheads (FAS 2025)
+      interceptors: 2,      // capital-region ABM only
+      interceptP: 0.4,
+      autoRetaliationP: 0.8, // Perimeter-style automated system is publicly reported
     },
     CN: {
       name: "People's Republic of China",
@@ -89,9 +91,11 @@
         fieldA:  { name: 'FIELD GOBI-1',     kind: 'field',   lon: 101.0, lat: 40.5 },
         fieldB:  { name: 'FIELD HIGHLAND-2', kind: 'field',   lon: 97.0,  lat: 35.0 },
       },
-      inventory: 6,
-      interceptors: 3,
-      interceptP: 0.4,
+      inventory: 4,         // ~600 total warheads (SIPRI 2025), far fewer on alert
+      interceptors: 1,
+      interceptP: 0.3,
+      noFirstUse: true,     // declared no-first-use policy: only fires if attacked
+      autoRetaliationP: 0.4,
     },
   };
 
@@ -258,6 +262,24 @@
     statementCalm: [90, 150],   // periodic calm/readiness line
   };
 
+  /*
+   * REALISM — calibration from open-source research (see README "Calibration").
+   * Timescale: 1 sim second ~ 8 real seconds, so an ~28-min ICBM flight ~ 210 sim s.
+   */
+  const REALISM = {
+    flightBase: 170,            // sim s; + flightPerDeg * distance
+    flightPerDeg: 0.35,
+    detectDelay: 10,            // sim s (~1-2 real min for satellite warning)
+    leaderReact: [20, 45],      // sim s before AI leadership starts moving (~3-6 real min)
+    relocatePerDeg: 8,          // travel time to bunker / airbase
+    relocateMin: 60,            // (~8-20 real min by helicopter / convoy)
+    relocateMax: 150,
+    decisionDelay: [60, 110],   // retaliation decision inside the warning window (~8-15 real min)
+    retaliateP: 0.9,            // wargames: players insist on "the last word" (RAND)
+    escalateP: 0.5,             // chance a response is bigger than the wave it answers
+    perimeterArmP: 0.7,         // AI arms automated retaliation once nuclear use starts
+  };
+
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
   /* Fill a template by key: fill('sealDone', {abbr:'NCA', site:'SITE GRANITE'}) */
@@ -267,5 +289,5 @@
     return pick(lines).replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
   }
 
-  window.LEADERS_CFG = { SIDES, LOCATIONS, STATUSES, TEMPLATES, CONFIDENCE, TIMING, initialLeaderState, fill };
+  window.LEADERS_CFG = { SIDES, LOCATIONS, STATUSES, TEMPLATES, CONFIDENCE, TIMING, REALISM, initialLeaderState, fill };
 })();
