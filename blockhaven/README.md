@@ -21,14 +21,15 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | Shift | Sneak (won't walk off edges) |
 | R or double-tap W | Sprint (Ctrl is not used because Ctrl+W closes the browser tab) |
 | Left click (hold) | Mine |
-| Right click | Place block, use bucket, open table/furnace/chest |
+| Right click | Place block, use bucket/hoe/seeds/shears, open table/furnace/chest, sleep in a bed, equip armor |
+| Right click (hold) | Eat food, draw a bow (release to fire) |
 | Middle click | Pick block |
 | 1–9, wheel | Hotbar |
 | E | Inventory / crafting |
 | Q / Shift+Q | Drop one / drop stack |
 | F3 | Debug info (coordinates, biome, light levels) |
 | F1 | Hide HUD |
-| Esc | Pause and settings |
+| Esc | Pause, settings, difficulty (Peaceful/Easy/Normal/Hard) |
 
 ## What's simulated
 
@@ -43,8 +44,16 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | Fluids | Water (5-tick) and lava (30-tick) with source/flow levels, falling columns, flow toward the nearest drop, infinite water sources, lava + water makes obsidian, cobblestone or stone |
 | Blocks | Falling sand and gravel, leaf decay with sapling drops, saplings that grow into trees, grass spreading, cactus growth |
 | Crafting | 2×2 inventory grid and 3×3 table, shaped (with mirroring) and shapeless recipes: planks, sticks, table, torches, furnace, chest, wood/stone/iron/diamond pickaxes, axes and shovels, bucket, sandstone, stone bricks, metal blocks |
+| Mobs | Pigs, cows, sheep and chickens spawn in herds on grass and are saved with the world; they wander, avoid cliffs, panic when hit and follow you if you hold wheat or seeds. Zombies, skeletons and spiders spawn in darkness (block light 0, sky light ≤ 7) 24–64 blocks away, chase on sight, and despawn far away. Zombies and skeletons burn in sunlight; spiders climb walls, pounce and are neutral in daylight; skeletons strafe and shoot arrows with gravity |
+| Combat | Swords 4/5/6/7 damage (wood→diamond), other tools less, fists 1; falling crits ×1.5; knockback (stronger when sprinting); 10-tick invulnerability; bow with draw power curve, full-draw crits, arrows that stick and can be picked up |
+| Hunger | 20 food points plus saturation and exhaustion (sprinting, jumping, mining, fighting, healing). Fast healing at full food, slow at 18+, starvation at 0 (stops at 10 HP on Easy, 1 HP on Normal, kills on Hard). Can't sprint at 6 or below. Eating takes 1.6 s |
+| Food | Apples (from oak leaves), bread, and raw/cooked porkchop, beef, chicken and mutton (cook in the furnace), rotten flesh |
+| Armor | Leather, iron and diamond helmet/chestplate/leggings/boots with armor points, diamond toughness, the classic damage-reduction formula and durability; armor bar in the HUD |
+| Farming | Hoe turns grass/dirt into farmland, which hydrates within 4 blocks of water and dries back to dirt; wheat grows through 8 stages on random ticks; tall grass drops seeds; landing on farmland can trample it |
+| Beds & ladders | Beds (3 wool + 3 planks) set your respawn point and skip the night when no monsters are within 8 blocks; ladders let you climb, and sneaking holds you in place |
+| Drops | Leather, feathers, wool (or shear sheep for 1–3), string, bones, arrows, rotten flesh; gravel drops flint |
 | Furnace | 10 s per item, fuel values (coal 80 s, planks 15 s, lava bucket 1000 s), lights up while burning |
 
 ## Not included
 
-Mobs, hunger, redstone, beds, the Nether, multiplayer.
+The full game is far larger than this. Missing: XP and enchanting, brewing, redstone, villages and other structures, the Nether and the End, boats and minecarts, doors, stairs, slabs and fences, dyes, breeding, weather, multiplayer. Creepers and Endermen are left out on purpose: they are another game's characters, and Blockhaven keeps its own designs.
