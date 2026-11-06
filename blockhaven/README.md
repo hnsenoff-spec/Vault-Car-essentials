@@ -52,8 +52,13 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | Farming | Hoe turns grass/dirt into farmland, which hydrates within 4 blocks of water and dries back to dirt; wheat grows through 8 stages on random ticks; tall grass drops seeds; landing on farmland can trample it |
 | Beds & ladders | Beds (3 wool + 3 planks) set your respawn point and skip the night when no monsters are within 8 blocks; ladders let you climb, and sneaking holds you in place |
 | Drops | Leather, feathers, wool (or shear sheep for 1–3), string, bones, arrows, rotten flesh; gravel drops flint |
+| Villages | Generate in plains, desert and taiga (oak, sandstone or spruce style): a well, gravel roads, houses with beds, crafting tables, furnaces and loot chests, wheat farms with water channels, and lamp posts. F3 shows the nearest village |
+| Villagers | Farmers, smiths, butchers and masons live in the houses, stay near home and flee monsters. Right-click one to trade; gold ingots are the currency (sell wheat, meat, coal, iron or cobblestone; buy bread, steak, iron tools and armor, stone bricks, glass, torches) |
+| Emberdeep | A cavern dimension under a bedrock ceiling with a lava sea at y=31, ashrock, cinder sand beaches, hanging glowshard clusters and fire-proof Ashen that set you alight. Build a 4×5 obsidian frame (corners optional, up to 21×21) and light it with a Fire Striker (iron ingot + flint). One block there equals 8 in the Overworld, and a return gate is built for you if none is near. Water evaporates and beds don't work |
+| Skyreach | Floating islands over the void with skystone, skygrass, skyleaf trees, sky crystal ore (iron pickaxe or better) and sky shrines holding loot. Reach it with a frame of glowshard blocks (4 glow dust each, mined in Emberdeep) lit with the Fire Striker |
+| Crystal gear | Sky crystals craft the top tool tier (mining speed 10, 2031 uses, crystal sword deals 8) and crystal lanterns |
 | Furnace | 10 s per item, fuel values (coal 80 s, planks 15 s, lava bucket 1000 s), lights up while burning |
 
 ## Not included
 
-The full game is far larger than this. Missing: XP and enchanting, brewing, redstone, villages and other structures, the Nether and the End, boats and minecarts, doors, stairs, slabs and fences, dyes, breeding, weather, multiplayer. Creepers and Endermen are left out on purpose: they are another game's characters, and Blockhaven keeps its own designs.
+The full game is far larger than this. Missing: XP and enchanting, brewing, redstone, dungeons, mineshafts and other structures, bosses, boats and minecarts, doors, stairs, slabs and fences, dyes, breeding, weather, multiplayer. Creepers, Endermen, the Nether and the End are not copied: Blockhaven's dimensions, mobs and portals have their own designs.
