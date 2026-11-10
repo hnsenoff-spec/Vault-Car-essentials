@@ -27,7 +27,7 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | 1–9, wheel | Hotbar |
 | E | Inventory / crafting |
 | Q / Shift+Q | Drop one / drop stack |
-| F3 | Debug info (coordinates, biome, light levels) |
+| F3 | Debug info (coordinates, biome, light levels, day, weather, XP) |
 | F1 | Hide HUD |
 | Esc | Pause, settings, difficulty (Peaceful/Easy/Normal/Hard) |
 
@@ -62,8 +62,11 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | Fences & doors | Oak, spruce and birch fences (planks + sticks) connect to neighbours and stand 1.5 blocks high so nothing jumps them; torches sit on top. Oak and spruce doors (6 planks → 3) are two blocks tall, open and close with a right-click, and stop monsters when shut |
 | Dungeons | Cobblestone rooms with mossy floors are carved into caves underground (up to one per chunk, only where they open onto a cave). Each holds a monster spawner and 1–2 loot chests (iron, gold, bread, string, bones, arrows, armor, a rare diamond) |
 | Spawners | A caged spawner wakes when you are within 16 blocks and every 10–40 s spawns up to 4 zombies, skeletons or spiders in the dark around it, up to 6 nearby. Light the room above level 7 to stop it, or mine it with a pickaxe (it drops nothing) |
+| Experience | Green orbs drop from killing mobs (5 for monsters, 1–3 for animals), mining coal, diamond and sky crystal ore, breeding, and smelting (collected when you take the output). Orbs float to you within 8 blocks. Levels use the classic curve (7, 9, 11… points) with a green bar and level number above the hotbar; dying drops 7 XP per level (max 100) and resets you to 0 |
+| Enchanting | Sugar cane grows by water and crafts paper (3 → 3); paper + leather makes a book; books + planks make bookshelves; a book, 2 diamonds and 4 obsidian make the enchanting table. Up to 15 bookshelves placed one block away raise the three offered levels (max 30). Classic rules: an option costs the shown number of levels and rolls one or more enchantments from the item's enchantability. Sharpness, Knockback, Fire Aspect, Looting, Efficiency, Unbreaking, Fortune, Silk Touch, Protection, Fire Protection, Feather Falling, Power, Punch, Flame and Infinity all work; enchanted items glow purple and list their enchantments in the tooltip |
+| Days & weather | A day counter sits in the top-right corner and a message marks each new day. Rain arrives every 10–150 minutes and lasts 10–20; a third of showers are thunderstorms with lightning flashes and thunder. Rain darkens the sky, dims the light by 3 levels (so undead stop burning and monsters spawn more), puts out fire, waters farmland and falls as snow in the taiga, frozen oceans and high mountains |
 | Breeding | Right-click two cows, sheep or pigs with wheat, or two chickens with seeds, and they walk together and produce a baby. Babies are half size with big heads, follow adults, grow up in 20 minutes (faster when fed) and drop nothing. Parents need 5 minutes before they can breed again |
 
 ## Not included
 
-The full game is far larger than this. Missing: XP and enchanting, brewing, redstone, mineshafts, strongholds and temples, bosses, boats and minecarts, fence gates and trapdoors, dyes, weather, multiplayer. Creepers, Endermen, the Nether and the End are not copied: Blockhaven's dimensions, mobs and portals have their own designs.
+The full game is far larger than this. Missing: anvils and enchanted books, brewing, redstone, mineshafts, strongholds and temples, bosses, boats and minecarts, fence gates and trapdoors, dyes, snow layers, multiplayer. Creepers, Endermen, the Nether and the End are not copied: Blockhaven's dimensions, mobs and portals have their own designs.

@@ -105,6 +105,17 @@ kbd { font-family: var(--f-display); font-size: 11px; padding: 2px 5px 1px; back
 .hslot b, .slot b, #cursor-stack b { position: absolute; right: 3px; bottom: 0; font-family: var(--f-body); font-weight: 400; font-size: 21px; line-height: 1; color: #fff; text-shadow: 2px 2px 0 #3a3a3a; }
 .dur { position: absolute; left: 14%; right: 14%; bottom: 10%; height: 3px; background: #000; }
 .dur i { display: block; height: 100%; }
+#xpbar { position: relative; width: calc(var(--slot) * 9 + 8px); height: 7px; background: #23231d; box-shadow: 0 0 0 2px #0b0a08; }
+#xpbar i { display: block; height: 100%; width: 0; background: #86e23a; }
+#xpbar b { position: absolute; left: 50%; top: -22px; transform: translateX(-50%); font-family: var(--f-body); font-weight: 400; font-size: 22px; line-height: 1; color: #86e23a; text-shadow: 2px 2px 0 #1e3608; }
+#xpbar b:empty { display: none; }
+#daylbl { position: absolute; right: max(10px, env(safe-area-inset-right, 0px)); top: max(8px, env(safe-area-inset-top, 0px)); font-size: 20px; color: #f4f4f4; text-shadow: 2px 2px 0 #000; }
+.slot img.ench, .hslot img.ench, #cursor-stack img.ench { filter: drop-shadow(0 0 3px #c66bff) drop-shadow(0 0 1px #ffd9ff); }
+.ench { display: flex; gap: 14px; align-items: center; padding: 4px 0 8px; }
+.eopts { display: grid; gap: 6px; flex: 1; }
+.eopt { width: auto; display: flex; gap: 12px; align-items: center; text-align: left; padding: 4px 10px; }
+.elvl { min-width: 34px; font-size: 26px; color: #86e23a; text-shadow: 2px 2px 0 #1e3608; }
+.ehint { font-size: 18px; color: var(--ink-dim); font-style: italic; }
 #itemname { position: absolute; left: 50%; bottom: calc(var(--slot) * 2.2 + 18px); transform: translateX(-50%); font-size: 24px; text-shadow: 2px 2px 0 #000; opacity: 0; white-space: nowrap; }
 #itemname.fade { animation: namefade 2.2s steps(12) forwards; }
 @keyframes namefade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
@@ -165,7 +176,8 @@ kbd { font-family: var(--f-display); font-size: 11px; padding: 2px 5px 1px; back
   <div id="itemname"></div>
   <div id="toast" role="status"></div>
   <div id="clickhint" hidden>Click to capture the mouse</div>
-  <div class="bottom"><div id="bars"><div class="bcol"><div id="armor"></div><div id="hearts"></div></div><div class="bcol r"><div id="bubbles"></div><div id="food"></div></div></div><div id="hotbar"></div></div>
+  <div id="daylbl"></div>
+  <div class="bottom"><div id="bars"><div class="bcol"><div id="armor"></div><div id="hearts"></div></div><div class="bcol r"><div id="bubbles"></div><div id="food"></div></div></div><div id="xpbar"><i id="xpfill"></i><b id="xplvl"></b></div><div id="hotbar"></div></div>
 </div>
 
 <div id="title" class="screen">
@@ -950,7 +962,9 @@ function genOverworld(cx, cz) {
     const { h, biome } = col(x, z), wx = x0 + x, wz = z0 + z; if (h + 1 >= CH) continue;
     const i = x | z << 4 | (h + 1) << 8, g = b[i - 256]; if (b[i] !== 0) continue;
     const r = hash2(wx, wz, seed + 91);
-    if (g === A.grass) {
+    if ((g === A.grass || g === A.sand) && h === SEA && r < 0.12 && x > 0 && x < 15 && z > 0 && z < 15 && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => col(x + dx, z + dz).h < SEA)) {
+      const hh = 1 + (hash2(wx, wz, seed + 93) * 3 | 0); for (let k = 0; k < hh && h + 1 + k < CH; k++) b[i + k * 256] = A.sugar_cane; // sugar cane by the water
+    } else if (g === A.grass) {
       const tg = biome === BIOME.PLAINS ? 0.14 : biome === BIOME.FOREST ? 0.06 : 0.04;
       if (r < tg) b[i] = A.tall_grass; else if (r < tg + 0.008) b[i] = A.dandelion; else if (r < tg + 0.014) b[i] = A.poppy;
     } else if (g === A.snowy_grass && r < 0.02) b[i] = A.tall_grass;
@@ -1525,7 +1539,7 @@ function updateBlock(x, y, z) {
   if (id === A.ladder) { const w = WALL_DIR[getMeta(x, y, z)]; if (!w || !supports(x + w[0], y, z + w[1])) breakBlock(x, y, z, true); return; }
   if (id === A.bed) { const m = getMeta(x, y, z), d2 = BED_DIR[m & 3], s = (m & 4) ? -1 : 1; if (getBlock(x + d2[0] * s, y, z + d2[1] * s) !== A.bed) setBlock(x, y, z, 0); return; }
   if (id === A.farmland) { if (OPQ[getBlock(x, y + 1, z)]) setBlock(x, y, z, A.dirt); return; }
-  if (d.shape === 'cross') { const b = getBlock(x, y - 1, z); const ok = id === A.dead_bush ? (b === A.sand) : (b === A.grass || b === A.dirt || b === A.snowy_grass); if (!ok) breakBlock(x, y, z, true); return; }
+  if (d.shape === 'cross') { const b = getBlock(x, y - 1, z); const ok = id === A.dead_bush ? (b === A.sand) : id === A.sugar_cane ? canePlaceOK(x, y, z) : (b === A.grass || b === A.dirt || b === A.snowy_grass); if (!ok) breakBlock(x, y, z, true); return; }
   if (d.shape === 'torch') { const m = getMeta(x, y, z); const w = WALL_DIR[m]; const ok = w ? supports(x + w[0], y, z + w[1]) : supports(x, y - 1, z); if (!ok) breakBlock(x, y, z, true); return; }
   if (d.shape === 'cactus') { const b = getBlock(x, y - 1, z); let ok = b === A.sand || b === A.cactus; for (let k = 0; k < 4; k++) { const n = getBlock(x + [1, -1, 0, 0][k], y, z + [0, 0, 1, -1][k]); if (SOLID[n]) ok = false; } if (!ok) breakBlock(x, y, z, true); }
 }
@@ -1595,9 +1609,11 @@ function randomTicks() {
       } else if (id === A.wheat) {
         const m = c.m[I3(lx, ly, lz)], L = getLight(x, ly, z); if (m < 7 && Math.max(L >> 4, L & 15) >= 9 && Math.random() < (getMeta(x, ly - 1, z) > 0 ? 1 / 3 : 1 / 6)) setBlock(x, ly, z, A.wheat, m + 1, false);
       } else if (id === A.farmland) {
-        let wet = false; for (let dx = -4; dx <= 4 && !wet; dx++) for (let dz = -4; dz <= 4 && !wet; dz++) for (let dy = 0; dy <= 1; dy++) if (getBlock(x + dx, ly + dy, z + dz) === A.water) { wet = true; break; }
+        let wet = rainingAt(x, ly + 1, z); for (let dx = -4; dx <= 4 && !wet; dx++) for (let dz = -4; dz <= 4 && !wet; dz++) for (let dy = 0; dy <= 1; dy++) if (getBlock(x + dx, ly + dy, z + dz) === A.water) { wet = true; break; }
         const m = c.m[I3(lx, ly, lz)];
         if (wet) { if (m !== 7) setBlock(x, ly, z, A.farmland, 7, false); } else if (m > 0) setBlock(x, ly, z, A.farmland, m - 1, false); else if (getBlock(x, ly + 1, z) !== A.wheat) setBlock(x, ly, z, A.dirt, 0, false);
+      } else if (id === A.sugar_cane && getBlock(x, ly + 1, z) === 0 && Math.random() < 0.06) {
+        let h = 1; while (getBlock(x, ly - h, z) === A.sugar_cane) h++; if (h < 3) setBlock(x, ly + 1, z, A.sugar_cane);
       } else if (id === A.cactus && getBlock(x, ly + 1, z) === 0 && Math.random() < 0.06) {
         let h = 1; while (getBlock(x, ly - h, z) === A.cactus) h++; if (h < 3) { setBlock(x, ly + 1, z, A.cactus); }
       }
@@ -1612,8 +1628,8 @@ function growTree(x, y, z, type) {
 }
 
 // ---------- items & entities ----------
-function spawnItem(x, y, z, id, n, dmg = 0, vx, vy, vz, delay = 10) {
-  ents.push({ type: 'item', x, y, z, vx: vx ?? (Math.random() - 0.5) * 0.2, vy: vy ?? 0.2, vz: vz ?? (Math.random() - 0.5) * 0.2, id, n, dmg, age: 0, delay, w: 0.125, h: 0.25, onGround: false, spin: Math.random() * 6 });
+function spawnItem(x, y, z, id, n, dmg = 0, vx, vy, vz, delay = 10, ench) {
+  ents.push({ type: 'item', x, y, z, vx: vx ?? (Math.random() - 0.5) * 0.2, vy: vy ?? 0.2, vz: vz ?? (Math.random() - 0.5) * 0.2, id, n, dmg, ench, age: 0, delay, w: 0.125, h: 0.25, onGround: false, spin: Math.random() * 6 });
 }
 function spawnFalling(x, y, z, id) { ents.push({ type: 'falling', x: x + 0.5, y, z: z + 0.5, vx: 0, vy: 0, vz: 0, id, w: 0.49, h: 0.98, age: 0, onGround: false }); }
 function dropBlockItems(x, y, z, id, tool) {
@@ -1630,7 +1646,7 @@ function dropBlockItems(x, y, z, id, tool) {
 function breakBlock(x, y, z, drops, tool) {
   const id = getBlock(x, y, z); if (!id) return; const d = BL[id];
   const te = W.tiles.get(x + ',' + y + ',' + z);
-  if (te && G.mode !== 'creative') for (const st of te.slots) if (st) spawnItem(x + 0.5, y + 0.5, z + 0.5, st.id, st.n, st.dmg || 0);
+  if (te && G.mode !== 'creative') for (const st of te.slots) if (st) spawnItem(x + 0.5, y + 0.5, z + 0.5, st.id, st.n, st.dmg || 0, undefined, undefined, undefined, 10, st.ench);
   W.tiles.delete(x + ',' + y + ',' + z);
   if (buildBreak(x, y, z, id)) return;
   if (id === A.bed) { const m = getMeta(x, y, z), d2 = BED_DIR[m & 3], sg = (m & 4) ? -1 : 1; if (drops && (m & 4)) { drops = false; dropBlockItems(x, y, z, id, tool); } if (getBlock(x + d2[0] * sg, y, z + d2[1] * sg) === A.bed) { setBlock(x + d2[0] * sg, y, z + d2[1] * sg, 0, 0, false); } if (m & 4) { setBlock(x, y, z, 0); breakParticles(x, y, z, id); playSound('break:wood', x, y, z); return; } }
@@ -1713,7 +1729,8 @@ function damage(n, cause) { return playerDamage(n, cause); }
 function die(cause) {
   P.dead = true; P.deathCause = cause;
   P.using = null; if (P.sleeping >= 0) wake();
-  for (let i = 0; i < 40; i++) if (inv[i]) { spawnItem(P.x, P.y + 1, P.z, inv[i].id, inv[i].n, inv[i].dmg || 0, (Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5, 40); inv[i] = null; }
+  if (G.mode !== 'creative' && P.lvl > 0) spawnXP(P.x, P.y + 0.5, P.z, Math.min(100, P.lvl * 7)); P.lvl = 0; P.xp = 0; lastBars = '';
+  for (let i = 0; i < 40; i++) if (inv[i]) { spawnItem(P.x, P.y + 1, P.z, inv[i].id, inv[i].n, inv[i].dmg || 0, (Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5, 40, inv[i].ench); inv[i] = null; }
   showScreen('dead');
 }
 function playerTick() {
@@ -1825,11 +1842,12 @@ function entitiesTick() {
       // merge with nearby stacks
       if (e.age % 10 === 0) for (const o of ents) if (o !== e && o.type === 'item' && o.id === e.id && !o.dead && !e.dead && maxStack(e.id) > 1 && Math.abs(o.x - e.x) < 0.5 && Math.abs(o.y - e.y) < 0.5 && Math.abs(o.z - e.z) < 0.5 && o.n + e.n <= maxStack(e.id)) { o.n += e.n; e.dead = true; break; }
       if (!P.dead && e.delay === 0 && !e.dead && Math.abs(e.x - P.x) < P.w + 1 && Math.abs(e.z - P.z) < P.w + 1 && e.y > P.y - 0.5 && e.y < P.y + P.h + 0.5) {
-        const left = addItem(e.id, e.n, e.dmg); if (left < e.n) { playSound('pop'); refreshHotbar(); }
+        const left = addItem(e.id, e.n, e.dmg, e.ench); if (left < e.n) { playSound('pop'); refreshHotbar(); }
         if (left === 0) e.dead = true; else e.n = left;
       }
       if (e.age > 6000 || e.y < -64) e.dead = true;
     } else if (e.type === 'arrow') { arrowTick(e);
+    } else if (e.type === 'xp') { xpTick(e);
     } else if (e.type === 'falling') {
       e.vy -= 0.04; moveEntity(e, 0, e.vy, 0); e.vy *= 0.98;
       if (e.onGround || e.age > 600) {
@@ -1856,7 +1874,7 @@ function furnacesTick() {
       te.burn = te.burnMax = fuelValue(fuel.id);
       if (fuel.id === 264) te.slots[1] = { id: 262, n: 1 }; else { fuel.n--; if (fuel.n <= 0) te.slots[1] = null; }
     }
-    if (te.burn > 0 && canSmelt) { te.cook++; if (te.cook >= 200) { te.cook = 0; if (out) out.n++; else te.slots[2] = { id: res, n: 1 }; inp.n--; if (inp.n <= 0) te.slots[0] = null; } }
+    if (te.burn > 0 && canSmelt) { te.cook++; if (te.cook >= 200) { te.cook = 0; te.xp = (te.xp || 0) + (SMELT_XP[res] || 0.35); if (out) out.n++; else te.slots[2] = { id: res, n: 1 }; inp.n--; if (inp.n <= 0) te.slots[0] = null; } }
     else if (te.cook > 0) te.cook = Math.max(0, te.cook - 2);
     const lit = te.burn > 0;
     if (lit !== wasLit) { const id = getBlock(x, y, z); if (id === A.furnace || id === A.furnace_lit) { const m = getMeta(x, y, z); const c = getChunk(x >> 4, z >> 4); const i = I3(x, y, z); c.b[i] = lit ? A.furnace_lit : A.furnace; c.m[i] = m; relight(x, y, z); markDirtyAt(x, z); c.modified = true; } }
@@ -1869,15 +1887,16 @@ function getTile(x, y, z, type) {
 }
 
 // ---------- inventory helpers ----------
-function addItem(id, n, dmg = 0) {
+function addItem(id, n, dmg = 0, ench) {
   const ms = maxStack(id);
   if (ms > 1) for (let i = 0; i < 36 && n > 0; i++) { const s = inv[i]; if (s && s.id === id && s.n < ms) { const k = Math.min(n, ms - s.n); s.n += k; n -= k; } }
-  for (let i = 0; i < 36 && n > 0; i++) if (!inv[i]) { const k = Math.min(n, ms); inv[i] = { id, n: k, dmg }; n -= k; }
+  for (let i = 0; i < 36 && n > 0; i++) if (!inv[i]) { const k = Math.min(n, ms); inv[i] = ench ? { id, n: k, dmg, ench } : { id, n: k, dmg }; n -= k; }
   return n;
 }
 function heldStack() { return inv[P.sel]; }
 function useTool() {
   const s = heldStack(); if (!s || s.id < 256 || !IT[s.id].tool || G.mode === 'creative') return;
+  const ub = enchLvl(s, 'unbreaking'); if (ub && Math.random() < ub / (ub + 1)) return;
   s.dmg = (s.dmg || 0) + 1; if (s.dmg >= IT[s.id].tool.dur) { inv[P.sel] = null; playSound('toolbreak'); }
   refreshHotbar();
 }
@@ -2015,6 +2034,10 @@ function playSound(name, x, y, z) {
     case 'click': tone('square', 1400, 1300, 0.03, vol * 0.12); break;
     case 'eat': burst({ t: 'bandpass', f: 1800, q: 0.7, d: 0.08 }, vol * 0.35, 1, r); break;
     case 'burp': tone('sawtooth', 120, 80, 0.25, vol * 0.15); break;
+    case 'orb': tone('sine', 1200 + Math.random() * 800, 1800 + Math.random() * 600, 0.08, vol * 0.12); break;
+    case 'levelup': tone('square', 660, 660, 0.08, vol * 0.1); setTimeout(() => tone('square', 880, 880, 0.08, vol * 0.1), 90); setTimeout(() => tone('square', 1320, 1320, 0.2, vol * 0.12), 180); break;
+    case 'enchant': tone('triangle', 400, 1600, 0.5, vol * 0.2); burst({ t: 'highpass', f: 4000, q: 0.5, d: 0.6 }, vol * 0.15, 1, 1); break;
+    case 'thunder': setTimeout(() => { burst({ t: 'lowpass', f: 160, q: 0.8, d: 1.8 }, vol * 0.9, 1, 0.5); tone('sine', 60, 30, 1.5, vol * 0.3); }, 600 + Math.random() * 1200); break;
     case 'door_open': burst(SND.wood, vol * 0.5, 1.2, 0.7); tone('square', 180, 260, 0.08, vol * 0.08); break;
     case 'door_close': burst(SND.wood, vol * 0.6, 1.4, 0.6); tone('square', 260, 150, 0.08, vol * 0.08); break;
     case 'bow': burst({ t: 'bandpass', f: 700, q: 1.5, d: 0.25 }, vol * 0.5, 1, r); break;
@@ -2036,7 +2059,7 @@ function readSave() { try { const s = localStorage.getItem(SAVE_KEY); return s ?
 function saveWorld() {
   if (G.state === 'title' || !W.started) return true;
   for (const c of W.chunks.values()) if (c.modified) snapshotChunk(c);
-  const data = { v: 2, seed: W.seed, seedText: W.seedText, time: W.time, mode: G.mode, spawn: G.spawn, player: { x: P.x, y: P.y, z: P.z, yaw: P.yaw, pitch: P.pitch, health: P.health, air: P.air, fly: P.fly, sel: P.sel, food: P.food, sat: P.sat }, inv, difficulty: G.difficulty, bed: G.bed, dim: W.dim, dims: serializeDims() };
+  const data = { v: 2, seed: W.seed, seedText: W.seedText, time: W.time, mode: G.mode, spawn: G.spawn, player: { x: P.x, y: P.y, z: P.z, yaw: P.yaw, pitch: P.pitch, health: P.health, air: P.air, fly: P.fly, sel: P.sel, food: P.food, sat: P.sat, xp: P.xp, lvl: P.lvl }, inv, difficulty: G.difficulty, bed: G.bed, dim: W.dim, dims: serializeDims(), day: W.day, weather: { rain: W.weather.rain, storm: W.weather.storm, timer: W.weather.timer, str: W.weather.str } };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); return true; } catch (e) { toast('Could not save: browser storage is full or blocked for this page.'); return false; }
 }
 
@@ -2077,6 +2100,7 @@ function canHarvest(id) { const d = BL[id]; if (!d.tier) return true; const s = 
 function breakSpeed(id) {
   const d = BL[id]; if (d.hardness < 0) return 0; if (d.hardness === 0) return 1;
   const s = heldStack(); const t = s && s.id >= 256 && IT[s.id].tool; let sp = (t && t.type === d.tool) ? t.speed : 1;
+  if (t && t.type === d.tool) { const ef = enchLvl(s, 'efficiency'); if (ef) sp += ef * ef + 1; }
   if (P.eyeWater) sp /= 5; if (!P.onGround && !P.fly) sp /= 5;
   return sp / d.hardness / (canHarvest(id) ? 30 : 100);
 }
@@ -2132,7 +2156,7 @@ function useAction(hit) {
     else if (face === 3) return;
     else { meta = n[0] === 1 ? 1 : n[0] === -1 ? 2 : n[2] === 1 ? 3 : 4; if (!supports(hit.x, hit.y, hit.z)) return; }
   }
-  if (d.shape === 'cross') { const b = getBlock(tx, ty - 1, tz); const ok = id === A.dead_bush ? b === A.sand : (b === A.grass || b === A.dirt || b === A.snowy_grass); if (!ok || BL[cur].fluid) return; }
+  if (d.shape === 'cross') { const b = getBlock(tx, ty - 1, tz); const ok = id === A.dead_bush ? b === A.sand : id === A.sugar_cane ? canePlaceOK(tx, ty, tz) : (b === A.grass || b === A.dirt || b === A.snowy_grass); if (!ok || BL[cur].fluid) return; }
   if (id === A.cactus) { const b = getBlock(tx, ty - 1, tz); if (b !== A.sand && b !== A.cactus) return; for (let k = 0; k < 4; k++) if (SOLID[getBlock(tx + [1, -1, 0, 0][k], ty, tz + [0, 0, 1, -1][k])]) return; }
   if (d.ladder) { if (face === 2 || face === 3 || REPL[hit.id] || BL[cur].fluid) return; meta = n[0] === 1 ? 1 : n[0] === -1 ? 2 : n[2] === 1 ? 3 : 4; if (!supports(hit.x, hit.y, hit.z)) return; }
   if (d.log) meta = face < 2 ? 1 : face < 4 ? 0 : 2;
@@ -2205,7 +2229,7 @@ function selectSlot(i) { P.sel = (i + 9) % 9; P.equip = 0.5; refreshHotbar(); sh
 let nameTimer = 0;
 function showItemName() { const s = heldStack(); const el = $('itemname'); el.textContent = s ? itemLabel(s.id) : ''; el.classList.remove('fade'); void el.offsetWidth; el.classList.add('fade'); }
 function slotHTML(s) {
-  if (!s) return ''; let h = `<img src="${itemIcon(s.id)}" alt="">`;
+  if (!s) return ''; let h = `<img src="${itemIcon(s.id)}" alt="" class="${s.ench ? 'ench' : ''}">`;
   if (s.n > 1) h += `<b>${s.n}</b>`;
   const t = s.id >= 256 && IT[s.id].tool; if (t && s.dmg > 0) { const f = 1 - s.dmg / t.dur; h += `<i class="dur"><i style="width:${f * 100}%;background:hsl(${f * 120},90%,45%)"></i></i>`; }
   return h;
@@ -2216,10 +2240,11 @@ function refreshHotbar() {
 }
 let lastBars = '';
 function refreshBars() {
-  const show = G.mode === 'survival'; $('bars').hidden = !show; if (!show) return;
+  const show = G.mode === 'survival'; $('bars').hidden = !show; $('xpbar').hidden = !show; if (!show) return;
   const hp = Math.ceil(P.health), arm = armorPoints()[0];
-  const key = hp + ':' + Math.ceil(P.air / 30) + ':' + P.food + ':' + arm + ':' + (P.hurt > 0 ? Math.floor(P.hurt / 3) % 2 : 0);
+  const key = hp + ':' + Math.ceil(P.air / 30) + ':' + P.food + ':' + arm + ':' + (P.hurt > 0 ? Math.floor(P.hurt / 3) % 2 : 0) + ':' + P.lvl + ':' + P.xp;
   if (key === lastBars) return; lastBars = key;
+  $('xpfill').style.width = (P.xp / xpToNext(P.lvl) * 100) + '%'; $('xplvl').textContent = P.lvl > 0 ? P.lvl : '';
   const icons = (val, full, half, empty) => { let o = ''; for (let i = 0; i < 10; i++) { const v = val - i * 2; o += `<i style="background-image:url(${v >= 2 ? full : v === 1 ? half : empty})"></i>`; } return o; };
   $('food').innerHTML = icons(P.food, HUDI.foodFull, HUDI.foodHalf, HUDI.foodEmpty);
   $('armor').innerHTML = arm > 0 ? icons(arm, HUDI.armFull, HUDI.armHalf, HUDI.armEmpty) : '';
@@ -2243,11 +2268,12 @@ function openInventory() { openContainer(G.mode === 'creative' ? 'creative' : 'p
 function openContainer(kind, hit) {
   UI.kind = kind; UI.cursor = null; UI.te = null; UI.pos = hit ? [hit.x, hit.y, hit.z] : null;
   UI.gsize = kind === 'table' ? 3 : kind === 'player' ? 2 : 0; UI.grid = new Array(UI.gsize * UI.gsize).fill(null);
-  if (kind === 'furnace' || kind === 'chest') UI.te = getTile(hit.x, hit.y, hit.z, kind);
+  if (kind === 'furnace' || kind === 'chest' || kind === 'enchant') UI.te = getTile(hit.x, hit.y, hit.z, kind); UI.enchSeed = 0; UI.enchDirty = false;
   mouse.l = mouse.r = false; mine = null;
   G.state = 'inventory'; showScreen('inv'); unlockPointer(); buildUI(); playSound('click');
 }
 function closeContainer() {
+  if (UI.kind === 'enchant' && UI.te && UI.te.slots[0]) { const s = UI.te.slots[0]; UI.te.slots[0] = null; const left = addItem(s.id, s.n, s.dmg, s.ench); if (left) spawnItem(P.x, P.y + 1.2, P.z, s.id, left, s.dmg, undefined, undefined, undefined, 40, s.ench); }
   for (let i = 0; i < UI.grid.length; i++) if (UI.grid[i]) { const s = UI.grid[i]; const left = addItem(s.id, s.n, s.dmg); if (left) spawnItem(P.x, P.y + 1.2, P.z, s.id, left, s.dmg, undefined, undefined, undefined, 40); UI.grid[i] = null; }
   if (UI.cursor) { const s = UI.cursor; if (G.mode !== 'creative') { const left = addItem(s.id, s.n, s.dmg); if (left) spawnItem(P.x, P.y + 1.2, P.z, s.id, left, s.dmg, undefined, undefined, undefined, 40); } UI.cursor = null; }
   UI.kind = null; $('tooltip').hidden = true; refreshHotbar(); resumeGame();
@@ -2273,9 +2299,12 @@ function buildUI() {
       html += `</div><span class="arrow" aria-hidden="true"></span>` + slotEl(mkSlot(() => UI.result ? { id: UI.result.out, n: UI.result.n } : null, () => { }, { out: true }), 'big') + '</div>';
     } else if (k === 'furnace') {
       const te = UI.te;
-      html += `<h3>Furnace</h3><div class="furn"><div class="fcol">` + slotEl(mkSlot(() => te.slots[0], (s) => { te.slots[0] = s; }, { group: 'cont' })) + `<span class="flame"><i id="fflame"></i></span>` + slotEl(mkSlot(() => te.slots[1], (s) => { te.slots[1] = s; }, { group: 'cont', accept: (s) => fuelValue(s.id) > 0 })) + `</div><span class="arrow prog"><i id="fprog"></i></span>` + slotEl(mkSlot(() => te.slots[2], (s) => { te.slots[2] = s; }, { group: 'cont', takeOnly: true }), 'big') + '</div>';
+      html += `<h3>Furnace</h3><div class="furn"><div class="fcol">` + slotEl(mkSlot(() => te.slots[0], (s) => { te.slots[0] = s; }, { group: 'cont' })) + `<span class="flame"><i id="fflame"></i></span>` + slotEl(mkSlot(() => te.slots[1], (s) => { te.slots[1] = s; }, { group: 'cont', accept: (s) => fuelValue(s.id) > 0 })) + `</div><span class="arrow prog"><i id="fprog"></i></span>` + slotEl(mkSlot(() => te.slots[2], (s) => { te.slots[2] = s; }, { group: 'cont', takeOnly: true, furnace: true }), 'big') + '</div>';
     } else if (k === 'trade') {
       html += tradeHTML();
+    } else if (k === 'enchant') {
+      UI.enchSlotHTML = () => slotEl(mkSlot(() => UI.te.slots[0], (s) => { UI.te.slots[0] = s; UI.enchDirty = true; }, { group: 'cont', accept: (st) => !!enchKind(st.id) && !st.ench }), 'big');
+      html += enchantHTML();
     } else if (k === 'chest') {
       const te = UI.te; html += '<h3>Chest</h3>';
       for (let r = 0; r < 3; r++) { html += '<div class="srow">'; for (let c = 0; c < 9; c++) { const i = r * 9 + c; html += slotEl(mkSlot(() => te.slots[i], (s) => { te.slots[i] = s; }, { group: 'cont' })); } html += '</div>'; }
@@ -2286,6 +2315,7 @@ function buildUI() {
 }
 function updateResult() { UI.result = UI.gsize ? matchRecipe(UI.grid, UI.gsize) : null; }
 function renderSlots() {
+  if (UI.kind === 'enchant' && UI.enchDirty) { UI.enchDirty = false; return buildUI(); }
   updateResult();
   const els = $('invpanel').querySelectorAll('.slot');
   els.forEach((el) => { const s = UI.slots[+el.dataset.i]; el.innerHTML = slotHTML(s.get()); });
@@ -2295,7 +2325,7 @@ function updateFurnaceUI() { if (UI.kind !== 'furnace') return; const te = UI.te
 function insertInto(slots, st) {
   const ms = maxStack(st.id);
   if (ms > 1) for (const s of slots) { const c = s.get(); if (c && c.id === st.id && c.n < ms && (!s.accept || s.accept(st))) { const k = Math.min(st.n, ms - c.n); c.n += k; st.n -= k; s.set(c); if (!st.n) return 0; } }
-  for (const s of slots) { if (!s.get() && !s.takeOnly && (!s.accept || s.accept(st))) { s.set({ id: st.id, n: Math.min(st.n, ms), dmg: st.dmg }); st.n -= Math.min(st.n, ms); if (!st.n) return 0; } }
+  for (const s of slots) { if (!s.get() && !s.takeOnly && (!s.accept || s.accept(st))) { s.set(st.ench ? { id: st.id, n: Math.min(st.n, ms), dmg: st.dmg, ench: st.ench } : { id: st.id, n: Math.min(st.n, ms), dmg: st.dmg }); st.n -= Math.min(st.n, ms); if (!st.n) return 0; } }
   return st.n;
 }
 function quickMove(s) {
@@ -2326,8 +2356,8 @@ function clickSlot(s, btn, shift) {
     return renderSlots();
   }
   const cur = s.get(), cs = UI.cursor, ms = cur ? maxStack(cur.id) : 64;
-  if (shift) { if (cur) quickMove(s); return renderSlots(); }
-  if (s.takeOnly) { if (!cur) return; if (!cs) { UI.cursor = cur; s.set(null); } else if (cs.id === cur.id && cs.n + cur.n <= ms) { cs.n += cur.n; s.set(null); } return renderSlots(); }
+  if (shift) { if (cur) quickMove(s); if (s.furnace && !s.get()) furnaceXP(UI.te); return renderSlots(); }
+  if (s.takeOnly) { if (!cur) return; if (!cs) { UI.cursor = cur; s.set(null); } else if (cs.id === cur.id && cs.n + cur.n <= ms) { cs.n += cur.n; s.set(null); } if (s.furnace && !s.get()) furnaceXP(UI.te); return renderSlots(); }
   if (cs && s.accept && !s.accept(cs)) return;
   if (btn === 0) {
     if (!cs) { if (cur) { UI.cursor = cur; s.set(null); } }
@@ -2386,9 +2416,9 @@ function initInput() {
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   window.addEventListener('wheel', (e) => { if (G.state === 'playing') selectSlot(P.sel + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
   const panel = $('invpanel');
-  panel.addEventListener('mousedown', (e) => { const tb = e.target.closest('.tradebtn'); if (tb) { e.preventDefault(); if (!tb.disabled) doTrade(+tb.dataset.t); return; } const el = e.target.closest('.slot'); if (!el) { if (UI.kind === 'creative' && UI.cursor && e.target.closest('#cgrid')) { UI.cursor = null; renderSlots(); } return; } e.preventDefault(); clickSlot(UI.slots[+el.dataset.i], e.button, e.shiftKey); });
+  panel.addEventListener('mousedown', (e) => { const eb = e.target.closest('.eopt'); if (eb) { e.preventDefault(); if (!eb.disabled) doEnchant(+eb.dataset.k); return; } const tb = e.target.closest('.tradebtn'); if (tb) { e.preventDefault(); if (!tb.disabled) doTrade(+tb.dataset.t); return; } const el = e.target.closest('.slot'); if (!el) { if (UI.kind === 'creative' && UI.cursor && e.target.closest('#cgrid')) { UI.cursor = null; renderSlots(); } return; } e.preventDefault(); clickSlot(UI.slots[+el.dataset.i], e.button, e.shiftKey); });
   panel.addEventListener('contextmenu', (e) => e.preventDefault());
-  panel.addEventListener('mouseover', (e) => { const el = e.target.closest('.slot'); const t = $('tooltip'); if (!el) { t.hidden = true; return; } const st = UI.slots[+el.dataset.i].get(); if (!st) { t.hidden = true; return; } t.textContent = itemLabel(st.id) + (st.id >= 256 && IT[st.id].tool ? `  (${IT[st.id].tool.dur - (st.dmg || 0)}/${IT[st.id].tool.dur})` : ''); t.hidden = false; });
+  panel.addEventListener('mouseover', (e) => { const el = e.target.closest('.slot'); const t = $('tooltip'); if (!el) { t.hidden = true; return; } const st = UI.slots[+el.dataset.i].get(); if (!st) { t.hidden = true; return; } t.textContent = itemLabel(st.id) + (st.id >= 256 && IT[st.id].tool ? `  (${IT[st.id].tool.dur - (st.dmg || 0)}/${IT[st.id].tool.dur})` : '') + (st.ench ? '\n' + enchList(st) : ''); t.hidden = false; });
   $('inv').addEventListener('mousedown', (e) => { if (e.target.id === 'inv' && UI.cursor && G.mode !== 'creative') { const s = UI.cursor; const [dx, dy, dz] = lookDir(); spawnItem(P.x, P.y + P.eyeH - 0.3, P.z, s.id, s.n, s.dmg, dx * 0.3, 0.1, dz * 0.3, 40); UI.cursor = null; renderSlots(); } });
 }
 function readMoveInput(dt) {
@@ -2428,6 +2458,7 @@ function render(alpha, now) {
   let fogR = [far * 0.62 - 16, far - 32], under = 0;
   const look = G.state === 'title' ? null : dimLook(day, far); let amb = 0, noSun = 0, skyDay = day;
   if (look) { top = look.top; fog = look.fog; fogR = look.fogR; under = look.under; amb = look.amb; noSun = look.noSun; if (look.day !== undefined) skyDay = look.day; }
+  const wl = G.state === 'title' ? null : weatherLook(day, top, fog, fogR, far); if (wl) { top = wl.top; fog = wl.fog; fogR = wl.fogR; skyDay = wl.day; }
   const eyeB = getBlock(Math.floor(cx), Math.floor(cy), Math.floor(cz));
   if (G.state !== 'title' && G.state !== 'loading' && P.eyeWater) { const L = getLight(Math.floor(cx), Math.floor(cy), Math.floor(cz)); const br = lightCurve(Math.max((L >> 4) - (1 - day) * 11, L & 15)); fog = [0.05 * br, 0.14 * br, 0.42 * br]; fogR = [-4, 22]; under = 1; }
   else if (eyeB === A.lava) { fog = [0.62, 0.12, 0.0]; fogR = [0, 1.5]; under = 1; }
@@ -2448,7 +2479,7 @@ function render(alpha, now) {
   gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
   const uc = PR.chunk.u; gl.useProgram(PR.chunk.p);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D_ARRAY, texArray); gl.uniform1i(uc.uTex, 0);
-  const dark = look ? look.dark : (1 - day) * 11, tint = look ? look.tint : [lerp(0.6, 1, day), lerp(0.65, 1, day), lerp(0.88, 1, day)];
+  const dark = look ? look.dark : Math.max(0, (1 - day) * 11 + (wl ? wl.dark : 0)), tint = look ? look.tint : wl && wl.flash ? [1, 1, 1] : [lerp(0.6, 1, day) * (wl ? 1 - 0.15 * W.weather.str : 1), lerp(0.65, 1, day) * (wl ? 1 - 0.12 * W.weather.str : 1), lerp(0.88, 1, day)];
   gl.uniformMatrix4fv(uc.uVP, false, VP); gl.uniform1f(uc.uDark, dark); gl.uniform3fv(uc.uFog, fog); gl.uniform2fv(uc.uFogR, fogR); gl.uniform1f(uc.uGamma, G.settings.gamma); gl.uniform3fv(uc.uSkyTint, tint); gl.uniform1f(uc.uAlphaT, 0.5); gl.uniform1f(uc.uFlash, 0); gl.uniform1f(uc.uAmb, amb);
   const vis = []; stats.drawn = 0;
   for (const c of W.chunks.values()) {
@@ -2465,6 +2496,7 @@ function render(alpha, now) {
   for (const e of ents) {
     const ex = e.x - cx, ey = e.y - cy, ez = e.z - cz; if (ex * ex + ez * ez > far * far) continue;
     if (e.type === 'arrow') { drawArrow(ue, e, cx, cy, cz, alpha); continue; }
+    if (e.type === 'xp') { const L = getLight(Math.floor(e.x), Math.floor(e.y + 0.3), Math.floor(e.z)); gl.uniform2f(ue.uLight, L >> 4, Math.max(L & 15, 10)); const t = (e.age + alpha) / 20; gl.uniformMatrix4fv(ue.uM, false, M4.chain(M4.trans(ex, ey + 0.15 + Math.sin(t * 2 + e.spin) * 0.05, ez), M4.rotY(-yaw), M4.scale(0.28, 0.28, 0.28))); const mesh = getXPMesh(); gl.bindVertexArray(mesh.vao); gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0); continue; }
     const L = getLight(Math.floor(e.x), Math.floor(e.y + 0.3), Math.floor(e.z)); gl.uniform2f(ue.uLight, L >> 4, L & 15);
     let M;
     if (e.type === 'falling') M = M4.mul(M4.trans(ex, ey + 0.5, ez), M4.scale(0.98, 0.98, 0.98));
@@ -2537,7 +2569,7 @@ function drawHand(aspect, alpha, dark, tint) {
 function resetWorld(seed, seedText) {
   for (const c of W.chunks.values()) freeMesh(c);
   W.chunks.clear(); W.saved = new Map(); W.tiles = new Map(); sched.clear(); schedSet.clear(); ents.length = 0; particles.length = 0; mobs.length = 0; W.animalChunks = new Set(); G.bed = null; lastC = null; W.store = {}; W.dim = 'overworld'; W.spawned = new Set(); W.loot = new Map(); W.spawners = new Map(); villageCache.clear(); W.travelLoading = false;
-  W.seedText = seedText; initNoise(seed); realmNoise(); W.time = 1000; W.tick = 0; W.started = false;
+  W.seedText = seedText; initNoise(seed); realmNoise(); W.time = 1000; W.tick = 0; W.started = false; weatherInit();
 }
 function findSpawn() {
   G.spawnYaw = null;
@@ -2557,14 +2589,14 @@ function villageHint(isNew) {
   toast(`Nearest village: ${Math.round(nv.d)} blocks to the ${compassDir(P.x, P.z, nv.x, nv.z)} (F3 shows its coordinates)`);
 }
 function topY(x, z) { for (let y = CH - 1; y > 0; y--) { const b = getBlock(x, y, z); if (SOLID[b] || BL[b].fluid) return y + 1; } return CH; }
-function resetPlayer(pos) { Object.assign(P, { x: pos[0], y: pos[1], z: pos[2], px: pos[0], py: pos[1], pz: pos[2], vx: 0, vy: 0, vz: 0, fall: 0, health: 20, air: 300, fire: 0, hurt: 0, invul: 0, dead: false, fly: false, sprint: false, food: 20, sat: 5, exh: 0, using: null, sleeping: -1, regen: 0, portalTime: 0, leftPortal: true }); $('sleep').style.opacity = 0; }
+function resetPlayer(pos) { Object.assign(P, { x: pos[0], y: pos[1], z: pos[2], px: pos[0], py: pos[1], pz: pos[2], vx: 0, vy: 0, vz: 0, fall: 0, health: 20, air: 300, fire: 0, hurt: 0, invul: 0, dead: false, fly: false, sprint: false, food: 20, sat: 5, exh: 0, using: null, sleeping: -1, regen: 0, portalTime: 0, leftPortal: true, xp: 0, lvl: 0 }); $('sleep').style.opacity = 0; }
 function startWorld(fromSave) {
   initAudio();
   if (fromSave) {
     const s = readSave(); if (!s) return toast('No saved world found.');
     resetWorld(s.seed, s.seedText); W.time = s.time || 1000; G.mode = s.mode || 'survival'; G.spawn = s.spawn || findSpawn();
     loadDimsFromSave(s); inv.fill(null); (s.inv || []).forEach((it, i) => { inv[i] = it; });
-    const p = s.player; resetPlayer([p.x, p.y, p.z]); P.yaw = p.yaw; P.pitch = p.pitch; P.health = p.health ?? 20; P.air = p.air ?? 300; P.fly = !!p.fly; P.sel = p.sel || 0; P.food = p.food ?? 20; P.sat = p.sat ?? 5; W.pendingSpawnY = false;
+    const p = s.player; resetPlayer([p.x, p.y, p.z]); P.yaw = p.yaw; P.pitch = p.pitch; P.health = p.health ?? 20; P.air = p.air ?? 300; P.fly = !!p.fly; P.sel = p.sel || 0; P.food = p.food ?? 20; P.sat = p.sat ?? 5; P.xp = p.xp || 0; P.lvl = p.lvl || 0; W.pendingSpawnY = false; W.day = s.day || 0; if (s.weather) Object.assign(W.weather, s.weather, { flash: 0 });
     G.difficulty = s.difficulty || 'normal'; G.bed = s.bed || null; loadDim(s.dim || 'overworld');
   } else {
     const txt = $('seed').value.trim(); const seed = txt ? strSeed(txt) : (Math.random() * 2 ** 31) | 0;
@@ -2587,7 +2619,8 @@ function respawn() { const away = W.dim !== 'overworld'; goHomeDimension(); cons
 // ============================================================
 let lastT = 0, acc = 0;
 function gameTick() {
-  W.tick++; if (G.state !== 'title') W.time = (W.time + 1) % 24000;
+  W.tick++; if (G.state !== 'title') { W.time = (W.time + 1) % 24000; if (W.time === 0) { W.day++; if (G.state === 'playing') toast('Day ' + (W.day + 1)); } }
+  if (G.state !== 'title') weatherTick(); if (W.tick % 20 === 0 && G.state !== 'title') $('daylbl').textContent = dayLabel();
   if (G.state === 'playing' || G.state === 'inventory') {
     playerTick(); portalTick(); interactTick(); useTick(); sleepTick(); hungerTick(); runScheduled(); entitiesTick(); mobsTick(); furnacesTick(); randomTicks();
     if (W.tick % 20 === 0) hostileSpawning(); spawnersTick();
@@ -2600,7 +2633,7 @@ function updateDebug() {
   if ($('debug').hidden) return; const fx = Math.floor(P.x), fy = Math.floor(P.y), fz = Math.floor(P.z), L = getLight(fx, Math.floor(P.y + P.eyeH), fz), ci = colInfo(fx, fz);
   const dir = ['north (−Z)', 'west (−X)', 'south (+Z)', 'east (+X)'][((Math.round(P.yaw / (Math.PI / 2)) % 4) + 4) % 4];
   const t = W.time; const hh = Math.floor(((t / 1000) + 6) % 24), mm = Math.floor((t % 1000) * 0.06);
-  $('debug').textContent = `Blockhaven  ${stats.fps} fps  ${stats.drawn} chunks drawn / ${W.chunks.size} loaded\nXYZ  ${P.x.toFixed(3)} / ${P.y.toFixed(3)} / ${P.z.toFixed(3)}\nBlock ${fx} ${fy} ${fz}   Chunk ${fx >> 4} ${fz >> 4} (in ${fx & 15} ${fz & 15})\nFacing ${dir}   yaw ${(P.yaw * 180 / Math.PI % 360).toFixed(1)}  pitch ${(P.pitch * 180 / Math.PI).toFixed(1)}\nBiome ${W.dim === 'overworld' ? BIOME_NAME[ci.biome] : '-'}   Dimension ${DIM_LABEL[W.dim]}   Light sky ${L >> 4} block ${L & 15}\nDay time ${t} (${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')})   Seed ${W.seedText}\nVelocity ${(Math.hypot(P.x - P.px, P.z - P.pz) * 20).toFixed(2)} m/s ${P.sprint ? 'sprint' : ''}${P.sneak ? 'sneak' : ''}${P.fly ? 'flying' : ''}${P.inWater ? ' swimming' : ''}\nMobs ${mobs.length}   Food ${P.food}  Saturation ${P.sat.toFixed(1)}   Difficulty ${G.difficulty}\n${W.dim === 'overworld' ? (() => { const nv = nearestVillage(P.x, P.z); return nv ? `Nearest village ${nv.x} ${nv.y} ${nv.z} (${Math.round(nv.d)} blocks ${compassDir(P.x, P.z, nv.x, nv.z)})` : 'No village nearby'; })() : ''}\n` + (curHit ? `Looking at ${BL[curHit.id].label} @ ${curHit.x} ${curHit.y} ${curHit.z}` : '');
+  $('debug').textContent = `Blockhaven  ${stats.fps} fps  ${stats.drawn} chunks drawn / ${W.chunks.size} loaded\nXYZ  ${P.x.toFixed(3)} / ${P.y.toFixed(3)} / ${P.z.toFixed(3)}\nBlock ${fx} ${fy} ${fz}   Chunk ${fx >> 4} ${fz >> 4} (in ${fx & 15} ${fz & 15})\nFacing ${dir}   yaw ${(P.yaw * 180 / Math.PI % 360).toFixed(1)}  pitch ${(P.pitch * 180 / Math.PI).toFixed(1)}\nBiome ${W.dim === 'overworld' ? BIOME_NAME[ci.biome] : '-'}   Dimension ${DIM_LABEL[W.dim]}   Light sky ${L >> 4} block ${L & 15}\nDay ${W.day + 1}  time ${t} (${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')})   Weather ${W.weather.rain ? (W.weather.storm ? 'storm' : 'rain') : 'clear'} (${Math.round(W.weather.timer / 20)} s)   XP ${P.lvl}L+${P.xp}   Seed ${W.seedText}\nVelocity ${(Math.hypot(P.x - P.px, P.z - P.pz) * 20).toFixed(2)} m/s ${P.sprint ? 'sprint' : ''}${P.sneak ? 'sneak' : ''}${P.fly ? 'flying' : ''}${P.inWater ? ' swimming' : ''}\nMobs ${mobs.length}   Food ${P.food}  Saturation ${P.sat.toFixed(1)}   Difficulty ${G.difficulty}\n${W.dim === 'overworld' ? (() => { const nv = nearestVillage(P.x, P.z); return nv ? `Nearest village ${nv.x} ${nv.y} ${nv.z} (${Math.round(nv.d)} blocks ${compassDir(P.x, P.z, nv.x, nv.z)})` : 'No village nearby'; })() : ''}\n` + (curHit ? `Looking at ${BL[curHit.id].label} @ ${curHit.x} ${curHit.y} ${curHit.z}` : '');
 }
 function frame(now) {
   requestAnimationFrame(frame);
@@ -2690,7 +2723,7 @@ function spawnMob(type, x, y, z, extra) {
 }
 const mobLoaded = (m) => { const c = getChunk(Math.floor(m.x) >> 4, Math.floor(m.z) >> 4); return c && c.lit; };
 function losClear(x0, y0, z0, x1, y1, z1) { const d = Math.hypot(x1 - x0, y1 - y0, z1 - z0), n = Math.ceil(d * 3); for (let i = 1; i < n; i++) { const t = i / n; if (OPQ[getBlock(Math.floor(lerp(x0, x1, t)), Math.floor(lerp(y0, y1, t)), Math.floor(lerp(z0, z1, t)))]) return false; } return true; }
-function skyBright() { if (W.dim === 'emberdeep') return 0; if (W.dim === 'skyreach') return 0.35; const ang = (W.time % 24000) / 24000 * Math.PI * 2; return clamp(Math.sin(ang) * 2 + 0.5, 0, 1); }
+function skyBright() { if (W.dim === 'emberdeep') return 0; if (W.dim === 'skyreach') return 0.35; const ang = (W.time % 24000) / 24000 * Math.PI * 2; return clamp(Math.sin(ang) * 2 + 0.5, 0, 1) * (W.weather ? 1 - 0.6 * W.weather.str : 1); }
 function knock(e, dx, dz, str) { const l = Math.hypot(dx, dz) || 1; e.vx = e.vx / 2 + dx / l * str; e.vz = e.vz / 2 + dz / l * str; if (e.onGround) e.vy = Math.min(0.4, e.vy / 2 + 0.4); }
 
 // ---------- damage to mobs ----------
@@ -2871,14 +2904,15 @@ function playerDamage(n, cause, src) {
   if (P.sleeping >= 0) wake();
   if (ARMOR_CAUSES.has(cause)) {
     const [a, t] = armorPoints();
-    if (a > 0) { n = n * (1 - Math.min(20, Math.max(a / 5, a - n / (2 + t / 4))) / 25); for (let s = 0; s < 4; s++) { const it = inv[36 + s]; if (it) { it.dmg = (it.dmg || 0) + Math.max(1, Math.floor(n / 4)); if (it.dmg >= IT[it.id].armor.dur) { inv[36 + s] = null; playSound('toolbreak'); } } } }
+    if (a > 0) { n = n * (1 - Math.min(20, Math.max(a / 5, a - n / (2 + t / 4))) / 25); for (let s = 0; s < 4; s++) { const it = inv[36 + s]; const ub = it && enchLvl(it, 'unbreaking'); if (it && !(ub && Math.random() > 0.6 + 0.4 / (ub + 1))) { it.dmg = (it.dmg || 0) + Math.max(1, Math.floor(n / 4)); if (it.dmg >= IT[it.id].armor.dur) { inv[36 + s] = null; playSound('toolbreak'); } } } }
   }
+  n = enchantReduce(n, cause);
   P.health = Math.max(0, P.health - n); P.invul = 10; P.hurt = 10; P.exh += 0.1; playSound('hurt');
   if (src && src.x !== undefined) knock(P, P.x - src.x, P.z - src.z, 0.4);
   if (P.health <= 0) { P.deathSrc = src && src.mob; die(cause); }
   return true;
 }
-function attackDamage() { const s = heldStack(); const t = s && s.id >= 256 && IT[s.id].tool; return t && t.attack ? t.attack : 1; }
+function attackDamage() { const s = heldStack(); const t = s && s.id >= 256 && IT[s.id].tool; return (t && t.attack ? t.attack : 1) + enchLvl(s, 'sharpness') * 1.25; }
 function rayAABB(ox, oy, oz, dx, dy, dz, b, maxT) {
   let t0 = 0, t1 = maxT; const o = [ox, oy, oz], d = [dx, dy, dz];
   for (let a = 0; a < 3; a++) { if (Math.abs(d[a]) < 1e-9) { if (o[a] < b[a] || o[a] > b[a + 3]) return -1; continue; } let ta = (b[a] - o[a]) / d[a], tb = (b[a + 3] - o[a]) / d[a]; if (ta > tb) { const q = ta; ta = tb; tb = q; } if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) return -1; }
@@ -2892,10 +2926,11 @@ function raycastMob(maxD) {
 function attackMob(m) {
   let dmg = attackDamage(); const crit = P.fall > 0 && !P.onGround && !P.inWater && !P.fly;
   if (crit) { dmg *= 1.5; for (let k = 0; k < 10; k++) particles.push({ x: m.x, y: m.y + m.h * 0.6, z: m.z, vx: (Math.random() - 0.5) * 0.3, vy: Math.random() * 0.25, vz: (Math.random() - 0.5) * 0.3, layer: TX.beak, u: 0.3, v: 0.3, life: 10, size: 0.05 }); }
-  const kb = P.sprint ? 0.9 : 0.4; if (P.sprint) P.sprint = false;
-  if (hurtMob(m, dmg, { x: P.x, z: P.z, kb, player: true })) {
-    if (m.type === 'spider') m.provoked = true;
-    P.exh += 0.1; const s = heldStack(); if (s && s.id >= 256 && IT[s.id].tool && G.mode !== 'creative') { s.dmg = (s.dmg || 0) + (IT[s.id].tool.type === 'sword' ? 1 : 2); if (s.dmg >= IT[s.id].tool.dur) { inv[P.sel] = null; playSound('toolbreak'); } refreshHotbar(); }
+  const held = heldStack(), kb = (P.sprint ? 0.9 : 0.4) + enchLvl(held, 'knockback') * 0.4; if (P.sprint) P.sprint = false;
+  W.looting = enchLvl(held, 'looting'); const hitOK = hurtMob(m, dmg, { x: P.x, z: P.z, kb, player: true }); W.looting = 0;
+  if (hitOK) {
+    if (m.type === 'spider') m.provoked = true; const fa = enchLvl(held, 'fire_aspect'); if (fa && !MOB[m.type].fireImmune) m.fire = Math.max(m.fire, fa * 80);
+    P.exh += 0.1; const s = heldStack(); const ub = enchLvl(s, 'unbreaking'); if (s && s.id >= 256 && IT[s.id].tool && G.mode !== 'creative' && !(ub && Math.random() < ub / (ub + 1))) { s.dmg = (s.dmg || 0) + (IT[s.id].tool.type === 'sword' ? 1 : 2); if (s.dmg >= IT[s.id].tool.dur) { inv[P.sel] = null; playSound('toolbreak'); } refreshHotbar(); }
   }
 }
 function interactMob(m) {
@@ -2917,8 +2952,8 @@ function arrowTick(e) {
     const nx = e.x + e.vx / steps, ny = e.y + e.vy / steps, nz = e.z + e.vz / steps;
     // entity hits
     const len = Math.hypot(e.vx, e.vy, e.vz) / steps, dx = e.vx / steps / len, dy = e.vy / steps / len, dz = e.vz / steps / len;
-    const speed = Math.hypot(e.vx, e.vy, e.vz); let dmg = Math.ceil(speed * 2); if (e.crit) dmg += Math.random() * (dmg / 2 + 2) | 0;
-    for (const m of mobs) { if (m === e.owner && e.age < 5 || m.dead) continue; const t = rayAABB(e.x, e.y, e.z, dx, dy, dz, [m.x - m.w - 0.1, m.y, m.z - m.w - 0.1, m.x + m.w + 0.1, m.y + m.h, m.z + m.w + 0.1], len); if (t >= 0) { if (hurtMob(m, dmg, { x: e.x - e.vx, z: e.z - e.vz, kb: 0.2, player: e.byPlayer })) playSound('arrowhit'); e.dead = true; return; } }
+    const speed = Math.hypot(e.vx, e.vy, e.vz); let dmg = Math.ceil(speed * 2 * (e.dmgMul || 1)); if (e.crit) dmg += Math.random() * (dmg / 2 + 2) | 0;
+    for (const m of mobs) { if (m === e.owner && e.age < 5 || m.dead) continue; const t = rayAABB(e.x, e.y, e.z, dx, dy, dz, [m.x - m.w - 0.1, m.y, m.z - m.w - 0.1, m.x + m.w + 0.1, m.y + m.h, m.z + m.w + 0.1], len); if (t >= 0) { if (hurtMob(m, dmg, { x: e.x - e.vx, z: e.z - e.vz, kb: 0.2 * (e.kbMul || 1), player: e.byPlayer })) { playSound('arrowhit'); if (e.flame && !MOB[m.type].fireImmune) m.fire = Math.max(m.fire, 100); } e.dead = true; return; } }
     if (!e.byPlayer && !P.dead) { const t = rayAABB(e.x, e.y, e.z, dx, dy, dz, [P.x - P.w, P.y, P.z - P.w, P.x + P.w, P.y + P.h, P.z + P.w], len); if (t >= 0) { playerDamage(dmg, 'arrow', { x: e.x - e.vx, z: e.z - e.vz, mob: 'skeleton' }); e.dead = true; return; } }
     const bx = Math.floor(nx), by = Math.floor(ny), bz = Math.floor(nz), b = getBlock(bx, by, bz);
     if (SOLID[b]) { const bb = colBox(b, getMeta(bx, by, bz)) || [0, 0, 0, 1, 1, 1]; if (nx >= bx + bb[0] && nx <= bx + bb[3] && ny >= by + bb[1] && ny <= by + bb[4] && nz >= bz + bb[2] && nz <= bz + bb[5]) { e.stuck = true; e.sx = bx; e.sy = by; e.sz = bz; e.x = nx - e.vx / steps * 0.6; e.y = ny - e.vy / steps * 0.6; e.z = nz - e.vz / steps * 0.6; e.age = 0; playSound('arrowhit', e.x, e.y, e.z); return; } }
@@ -2961,10 +2996,11 @@ function useTick() {
 function bowPower(t) { let f = t / 20; f = (f * f + f * 2) / 3; return Math.min(1, f); }
 function releaseBow(u) {
   const f = bowPower(u.t); if (f < 0.1) return;
-  const [dx, dy, dz] = lookDir(), sp = f * 3;
-  spawnArrow(P.x + dx * 0.3, P.y + P.eyeH - 0.1, P.z + dz * 0.3, dx * sp, dy * sp, dz * sp, null, true, f >= 1, G.mode !== 'creative');
+  const [dx, dy, dz] = lookDir(), sp = f * 3, bow = heldStack(), inf = enchLvl(bow, 'infinity') > 0, pw = enchLvl(bow, 'power');
+  spawnArrow(P.x + dx * 0.3, P.y + P.eyeH - 0.1, P.z + dz * 0.3, dx * sp, dy * sp, dz * sp, null, true, f >= 1, G.mode !== 'creative' && !inf);
+  const ar = ents[ents.length - 1]; ar.dmgMul = pw ? 1 + (pw + 1) * 0.25 : 1; ar.kbMul = 1 + enchLvl(bow, 'punch') * 1.5; ar.flame = enchLvl(bow, 'flame') > 0;
   playSound('bow');
-  if (G.mode !== 'creative') { for (let i = 0; i < 36; i++) if (inv[i] && inv[i].id === 292) { inv[i].n--; if (inv[i].n <= 0) inv[i] = null; break; } const s = heldStack(); s.dmg = (s.dmg || 0) + 1; if (s.dmg >= 384) { inv[P.sel] = null; playSound('toolbreak'); } }
+  if (G.mode !== 'creative') { if (!inf) for (let i = 0; i < 36; i++) if (inv[i] && inv[i].id === 292) { inv[i].n--; if (inv[i].n <= 0) inv[i] = null; break; } const s = heldStack(); const ub = enchLvl(s, 'unbreaking'); if (!(ub && Math.random() < ub / (ub + 1))) s.dmg = (s.dmg || 0) + 1; if (s.dmg >= 384) { inv[P.sel] = null; playSound('toolbreak'); } }
   refreshHotbar();
 }
 
@@ -3692,7 +3728,7 @@ function breedingTick(m, T) {
   if (md > 1.2) { if (!m.goal || m.goalT > 10) setGoal(m, mate.x, mate.z, 1.0); return; }
   if (++m.together < 60) return;
   const baby = spawnMob(m.type, (m.x + mate.x) / 2, Math.max(m.y, mate.y), (m.z + mate.z) / 2); setBaby(baby, 24000); baby.loveCd = 0;
-  m.love = 0; mate.love = 0; m.loveCd = 6000; mate.loveCd = 6000; m.together = 0; mate.together = 0; hearts(m, 8); hearts(mate, 8); mobSound(baby, 'idle');
+  m.love = 0; mate.love = 0; m.loveCd = 6000; mate.loveCd = 6000; m.together = 0; mate.together = 0; hearts(m, 8); hearts(mate, 8); mobSound(baby, 'idle'); spawnXP(baby.x, baby.y + 0.5, baby.z, 1 + (Math.random() * 7 | 0));
 }
 
 // ---------- recipes ----------
@@ -3701,6 +3737,198 @@ for (const [base, st] of Object.entries(STAIRS_OF)) shaped(['#  ', '## ', '###']
 [[5, 76], [23, 77], [20, 78]].forEach(([pl, f]) => shaped(['#s#', '#s#'], { '#': pl, s: 256 }, f, 3));
 shaped(['##', '##', '##'], { '#': 5 }, 79, 3); shaped(['##', '##', '##'], { '#': 23 }, 80, 3);
 shapeless([4, 33], 81);
+
+// ============================================================
+//  Content pack 5: experience, enchanting, day counter, weather
+// ============================================================
+
+// ---------- blocks & items ----------
+B(83, 'sugar_cane', Object.assign({}, cross, { tex: 'sugar_cane', label: 'Sugar Cane', cane: true, sel: [0.1, 0, 0.1, 0.9, 1, 0.9] }));
+B(84, 'enchanting_table', { tex: ['ench_top', 'obsidian', 'ench_side'], shape: 'box', opaque: false, opacity: 0, hardness: 5, tool: 'pickaxe', tier: 1, ui: 'enchant', label: 'Enchanting Table', box: [0, 0, 0, 1, 0.75, 1] });
+B(85, 'bookshelf', { tex: ['oak_planks', 'oak_planks', 'bookshelf'], hardness: 1.5, tool: 'axe', sound: 'wood', label: 'Bookshelf', fuel: 300, drop: 0 });
+NBLOCKS = 86;
+I(340, 'paper', { label: 'Paper' });
+I(341, 'book', { label: 'Book' });
+shaped(['###'], { '#': 83 }, 340, 3);
+shapeless([340, 340, 340, 295], 341);
+shaped(['###', 'BBB', '###'], { '#': 'planks', B: 341 }, 85);
+shaped([' B ', 'DOD', 'OOO'], { B: 341, D: 261, O: 40 }, 84);
+function canePlaceOK(x, y, z) {
+  const b = getBlock(x, y - 1, z); if (b === A.sugar_cane) return true; if (b !== A.grass && b !== A.dirt && b !== A.sand && b !== A.snowy_grass) return false;
+  for (const [dx, dz] of DIR4) if (getBlock(x + dx, y - 1, z + dz) === A.water) return true; return false;
+}
+
+function buildXPTiles() {
+  makeTile('sugar_cane', (s, R) => fill(s, (x, y) => { const stalk = x === 3 || x === 4 || x === 9 || x === 10 || x === 13; if (!stalk) return s(x, y, [0, 0, 0], 0); s(x, y, sh([120, 180, 70], (y % 5 === 0 ? 0.75 : 0.95) + R() * 0.1)); }));
+  makeTile('ench_top', (s, R) => fill(s, (x, y) => { const edge = x === 0 || x === 15 || y === 0 || y === 15; if (edge) return s(x, y, sh([40, 30, 34], 0.9 + R() * 0.1)); const bookX = x >= 4 && x <= 11, bookY = y >= 3 && y <= 12; if (bookX && bookY) return s(x, y, (x === 7 || x === 8) ? [120, 20, 40] : [240, 232, 210]); s(x, y, sh([150, 40, 60], 0.85 + R() * 0.15)); }));
+  makeTile('ench_side', (s, R) => fill(s, (x, y) => { if (y < 4) return s(x, y, sh([150, 40, 60], 0.85 + R() * 0.15)); const src = tiles[TX.obsidian].d, i = (y * 16 + x) * 4; s(x, y, (x >= 6 && x <= 9 && y >= 7 && y <= 11) ? [60, 230, 220] : [src[i], src[i + 1], src[i + 2]]); }));
+  makeTile('bookshelf', (s, R) => { const src = tiles[TX.oak_planks].d; fill(s, (x, y) => { const i = (y * 16 + x) * 4; if (y < 2 || y > 13 || (y >= 7 && y <= 8) || x < 1 || x > 14) return s(x, y, [src[i], src[i + 1], src[i + 2]]); const k = Math.floor((x - 1 + (y > 8 ? 2 : 0)) / 2.3) % 6; s(x, y, sh([[180, 50, 50], [60, 110, 180], [70, 140, 70], [200, 150, 60], [150, 80, 160], [220, 220, 200]][k], 0.8 + (x % 2) * 0.2)); }); });
+  makeTile('paper', (s, R) => fill(s, (x, y) => { const on = x >= 3 && x <= 12 && y >= 1 && y <= 14; s(x, y, on ? ((y % 3 === 1 && x > 4 && x < 11) ? [190, 190, 185] : [245, 243, 236]) : [0, 0, 0], on ? 255 : 0); }));
+  makeTile('book', (s, R) => fill(s, (x, y) => { const on = x >= 3 && x <= 12 && y >= 2 && y <= 13; if (!on) return s(x, y, [0, 0, 0], 0); s(x, y, x === 3 || x === 4 ? [110, 60, 30] : x === 12 ? [240, 232, 210] : [160, 90, 50]); }));
+  makeTile('xp_orb', (s) => fill(s, (x, y) => { const d = Math.hypot(x - 7.5, y - 7.5); s(x, y, d < 2.5 ? [240, 255, 160] : d < 4.5 ? [120, 240, 60] : [40, 160, 40], d < 5.5 ? 255 : 0); }));
+  makeTile('rain', (s, R) => fill(s, (x, y) => { const on = (x === 3 || x === 9 || x === 13) && (y + x) % 7 < 5; s(x, y, [170, 190, 240], on ? 170 : 0); }));
+  makeTile('snowflake', (s) => fill(s, (x, y) => { const d = Math.abs(x - 7.5) + Math.abs(y - 7.5); s(x, y, [250, 250, 255], d < 3 ? 255 : 0); }));
+}
+const _bt1 = buildTiles; buildTiles = function () { _bt1(); buildXPTiles(); };
+
+// ---------- experience ----------
+const xpToNext = (l) => l < 16 ? 2 * l + 7 : l < 31 ? 5 * l - 38 : 9 * l - 158;
+function addXP(n) {
+  if (n <= 0) return; P.xp += n;
+  let up = false; while (P.xp >= xpToNext(P.lvl)) { P.xp -= xpToNext(P.lvl); P.lvl++; up = true; }
+  playSound(up ? 'levelup' : 'orb'); lastBars = '';
+}
+function spendLevels(n) { P.lvl = Math.max(0, P.lvl - n); P.xp = Math.min(P.xp, xpToNext(P.lvl) - 1); lastBars = ''; }
+const ORB_SIZES = [2477, 1237, 617, 307, 149, 73, 37, 17, 7, 3, 1];
+function spawnXP(x, y, z, total) {
+  let guard = 40; while (total > 0 && guard-- > 0) { const v = ORB_SIZES.find(s => s <= total); total -= v; ents.push({ type: 'xp', x: x + (Math.random() - 0.5) * 0.5, y, z: z + (Math.random() - 0.5) * 0.5, vx: (Math.random() - 0.5) * 0.2, vy: 0.2 + Math.random() * 0.1, vz: (Math.random() - 0.5) * 0.2, v, w: 0.15, h: 0.3, age: 0, spin: Math.random() * 6, onGround: false, step: 0 }); }
+}
+function xpTick(e) {
+  e.vy -= 0.03; const dx = P.x - e.x, dy = P.y + 0.9 - e.y, dz = P.z - e.z, d = Math.hypot(dx, dy, dz);
+  if (!P.dead && d < 8 && G.state !== 'title') { const f = (1 - d / 8); e.vx += dx / d * f * 0.1; e.vy += dy / d * f * 0.1; e.vz += dz / d * f * 0.1; }
+  moveEntity(e, e.vx, e.vy, e.vz); const fr = e.onGround ? 0.6 : 0.98; e.vx *= fr; e.vz *= fr; e.vy *= 0.98;
+  if (!P.dead && e.age > 2 && d < 1.2) { addXP(e.v); e.dead = true; }
+  if (e.age > 6000 || e.y < -64) e.dead = true;
+}
+const MOB_XP = (m) => m.baby > 0 || MOB[m.type].villager ? 0 : MOB[m.type].hostile ? 5 : 1 + (Math.random() * 3 | 0);
+const ORE_XP = { 12: [0, 2], 15: [3, 7], 61: [3, 7], 55: [1, 3] };
+const SMELT_XP = { 259: 0.7, 260: 1, 1: 0.1, 11: 0.1, 258: 0.1 };
+let xpMesh = null;
+function getXPMesh() { if (!xpMesh) { const v = [], ix = []; spriteVerts(TX.xp_orb, v, ix); xpMesh = buildEntMesh(v, ix); } return xpMesh; }
+function furnaceXP(te) { if (!te || !te.xp) return; const n = Math.floor(te.xp); const extra = Math.random() < te.xp - n ? 1 : 0; te.xp = 0; if (n + extra > 0) addXP(n + extra); }
+
+// ---------- enchanting ----------
+// [key, label, max level, weight, applies, min(level), range above min]
+const ENCH = {
+  sharpness: { label: 'Sharpness', max: 5, w: 10, on: 'sword', min: l => 1 + (l - 1) * 11, span: 20 },
+  knockback: { label: 'Knockback', max: 2, w: 5, on: 'sword', min: l => 5 + (l - 1) * 20, span: 50 },
+  fire_aspect: { label: 'Fire Aspect', max: 2, w: 2, on: 'sword', min: l => 10 + (l - 1) * 20, span: 50 },
+  looting: { label: 'Looting', max: 3, w: 2, on: 'sword', min: l => 15 + (l - 1) * 9, span: 50 },
+  efficiency: { label: 'Efficiency', max: 5, w: 10, on: 'tool', min: l => 1 + (l - 1) * 10, span: 50 },
+  unbreaking: { label: 'Unbreaking', max: 3, w: 5, on: 'any', min: l => 5 + (l - 1) * 8, span: 50 },
+  fortune: { label: 'Fortune', max: 3, w: 2, on: 'tool', min: l => 15 + (l - 1) * 9, span: 50, not: 'silk_touch' },
+  silk_touch: { label: 'Silk Touch', max: 1, w: 1, on: 'tool', min: () => 15, span: 50, not: 'fortune' },
+  protection: { label: 'Protection', max: 4, w: 10, on: 'armor', min: l => 1 + (l - 1) * 11, span: 11, not: 'fire_protection' },
+  fire_protection: { label: 'Fire Protection', max: 4, w: 5, on: 'armor', min: l => 10 + (l - 1) * 8, span: 8, not: 'protection' },
+  feather_falling: { label: 'Feather Falling', max: 4, w: 5, on: 'boots', min: l => 5 + (l - 1) * 6, span: 6 },
+  power: { label: 'Power', max: 5, w: 10, on: 'bow', min: l => 1 + (l - 1) * 10, span: 15 },
+  punch: { label: 'Punch', max: 2, w: 2, on: 'bow', min: l => 12 + (l - 1) * 20, span: 25 },
+  flame: { label: 'Flame', max: 1, w: 2, on: 'bow', min: () => 20, span: 30 },
+  infinity: { label: 'Infinity', max: 1, w: 1, on: 'bow', min: () => 20, span: 30 },
+};
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+function enchKind(id) { if (id < 256) return null; const it = IT[id]; if (!it) return null; if (it.armor) return it.armor.slot === 3 ? 'boots' : 'armor'; if (id === 291) return 'bow'; const t = it.tool; if (!t) return null; if (t.type === 'sword') return 'sword'; if (t.type === 'pickaxe' || t.type === 'axe' || t.type === 'shovel') return 'tool'; return null; }
+function enchApplies(key, kind) { const on = ENCH[key].on; return on === 'any' || on === kind || (on === 'armor' && kind === 'boots'); }
+function enchantability(id) {
+  if (id >= 312 && id <= 315) return 15; if (id >= 316 && id <= 319) return 9; if (id >= 320 && id <= 323) return 10; if (id === 291) return 1;
+  if ((id >= 270 && id <= 272) || id === 282) return 15; if ((id >= 273 && id <= 275) || id === 283) return 5; if ((id >= 276 && id <= 278) || id === 284) return 14; if ((id >= 279 && id <= 281) || id === 285) return 10; if (id >= 333 && id <= 337) return 12; return 1;
+}
+const enchLvl = (s, key) => (s && s.ench && s.ench[key]) || 0;
+function enchList(s) { return s && s.ench ? Object.entries(s.ench).map(([k, l]) => ENCH[k].label + (ENCH[k].max > 1 ? ' ' + ROMAN[l] : '')).join(', ') : ''; }
+function bookshelvesAround(x, y, z) {
+  let n = 0;
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+    if (Math.abs(dx) < 2 && Math.abs(dz) < 2) continue;
+    for (let dy = 0; dy <= 1; dy++) if (getBlock(x + dx, y + dy, z + dz) === A.bookshelf && getBlock(x + Math.sign(dx), y, z + Math.sign(dz)) === 0) n++;
+  }
+  return Math.min(15, n);
+}
+function enchantOptions(seed, shelves, id) {
+  const R = mulberry32(seed), kind = enchKind(id); if (!kind) return [];
+  const base = 1 + (R() * 8 | 0) + (shelves >> 1) + (R() * (shelves + 1) | 0);
+  const lv = [Math.max(Math.floor(base / 3), 1), Math.floor(base * 2 / 3) + 1, Math.max(base, shelves * 2)];
+  return lv.map((level, i) => { const list = rollEnchants(mulberry32(seed * 31 + i), level, id); return { level, list, hint: list.length ? ENCH[list[0][0]].label + (ENCH[list[0][0]].max > 1 ? ' ' + ROMAN[list[0][1]] : '') : '' }; });
+}
+function rollEnchants(R, level, id) {
+  const kind = enchKind(id), e = enchantability(id); if (!kind) return [];
+  let ml = level + 1 + (R() * (e / 4 + 1) | 0) + (R() * (e / 4 + 1) | 0); ml = Math.max(1, Math.round(ml * (1 + (R() + R() - 1) * 0.15)));
+  const out = [];
+  const pick = () => {
+    const pool = [];
+    for (const [k, d] of Object.entries(ENCH)) { if (!enchApplies(k, kind) || out.some(([q]) => q === k || ENCH[q].not === k || d.not === q)) continue; for (let l = d.max; l >= 1; l--) if (ml >= d.min(l) && ml <= d.min(l) + d.span) { pool.push([k, l, d.w]); break; } }
+    if (!pool.length) return false; const tot = pool.reduce((a, p) => a + p[2], 0); let r = R() * tot; for (const p of pool) { r -= p[2]; if (r <= 0) { out.push([p[0], p[1]]); return true; } } return false;
+  };
+  pick(); while (out.length && R() < (ml + 1) / 50) { ml = Math.floor(ml / 2); if (!pick()) break; }
+  return out;
+}
+function enchantHTML() {
+  const te = UI.te; UI.enchSeed = UI.enchSeed || (Math.random() * 1e9 | 0);
+  const shelves = bookshelvesAround(UI.pos[0], UI.pos[1], UI.pos[2]);
+  let h = `<h3>Enchant</h3><p class="hint">Bookshelves nearby: ${shelves}. Costs the shown number of levels (you have ${P.lvl}).</p><div class="ench">`;
+  h += UI.enchSlotHTML();
+  const s = te.slots[0], opts = s && !s.ench ? enchantOptions(UI.enchSeed, shelves, s.id) : [];
+  h += '<div class="eopts">';
+  for (let i = 0; i < 3; i++) { const o = opts[i]; const can = o && (G.mode === 'creative' || P.lvl >= o.level); h += `<button class="btn eopt" data-k="${i}" ${o && can ? '' : 'disabled'}><span class="elvl">${o ? o.level : '-'}</span><span class="ehint">${o ? o.hint : (s && s.ench ? 'Already enchanted' : 'Place a tool, weapon, bow or armor')}</span></button>`; }
+  return h + '</div></div>';
+}
+function doEnchant(i) {
+  const te = UI.te, s = te.slots[0]; if (!s || s.ench) return;
+  const shelves = bookshelvesAround(UI.pos[0], UI.pos[1], UI.pos[2]), o = enchantOptions(UI.enchSeed, shelves, s.id)[i]; if (!o || !o.list.length) return;
+  if (G.mode !== 'creative') { if (P.lvl < o.level) return; spendLevels(o.level); }
+  s.ench = Object.fromEntries(o.list); UI.enchSeed = (Math.random() * 1e9 | 0); playSound('enchant'); buildUI();
+}
+// damage reduction from protection enchantments (4% per point, capped at 80%)
+function enchantReduce(n, cause) {
+  let epf = 0; for (let k = 0; k < 4; k++) { const it = inv[36 + k]; if (!it || !it.ench) continue; epf += enchLvl(it, 'protection'); if (cause === 'lava' || cause === 'burned') epf += enchLvl(it, 'fire_protection') * 2; if (cause === 'fell') epf += enchLvl(it, 'feather_falling') * 3; }
+  return epf ? n * (1 - Math.min(20, epf) * 0.04) : n;
+}
+const SILK_SELF = new Set([1, 2, 10, 11, 12, 15, 19, 22, 26, 55, 60, 61, 85, 58]);
+const _dbi0 = dropBlockItems;
+dropBlockItems = function (x, y, z, id, tool) {
+  if (G.mode === 'creative') return;
+  const silk = enchLvl(tool, 'silk_touch'), fort = enchLvl(tool, 'fortune');
+  if (silk && SILK_SELF.has(id)) return spawnItem(x + 0.5, y + 0.3, z + 0.5, id, 1);
+  if (id === A.bookshelf) return spawnItem(x + 0.5, y + 0.3, z + 0.5, 341, 3);
+  if (fort && (id === A.coal_ore || id === A.diamond_ore || id === A.skycrystal_ore)) { const mul = Math.max(1, (Math.random() * (fort + 2) | 0)); return spawnItem(x + 0.5, y + 0.3, z + 0.5, BL[id].drop, mul); }
+  _dbi0(x, y, z, id, tool);
+  if (!silk && ORE_XP[id] && tool !== undefined) { const [a, b] = ORE_XP[id]; spawnXP(x + 0.5, y + 0.5, z + 0.5, a + (Math.random() * (b - a + 1) | 0)); }
+};
+const _dropLoot0 = dropLoot;
+dropLoot = function (m, byPlayer) {
+  const lt = byPlayer ? W.looting | 0 : 0;
+  if (lt) { const si = spawnItem; spawnItem = function (x, y, z, id, n, ...rest) { return si(x, y, z, id, n + (Math.random() * (lt + 1) | 0), ...rest); }; _dropLoot0(m, byPlayer); spawnItem = si; }
+  else _dropLoot0(m, byPlayer);
+  if (byPlayer) { const v = MOB_XP(m); if (v) spawnXP(m.x, m.y + 0.5, m.z, v); }
+};
+
+// ---------- days & weather ----------
+function weatherInit() { W.day = 0; W.weather = { rain: 0, storm: 0, timer: 12000 + (Math.random() * 60000 | 0), str: 0, flash: 0 }; }
+function rainingAt(x, y, z) { return W.dim === 'overworld' && W.weather.str > 0.5 && (getLight(x, y, z) >> 4) === 15; }
+function snowyAt(x, y, z) { const ci = colInfo(x, z); return ci.biome === BIOME.TAIGA || ci.biome === BIOME.FROZEN_OCEAN || (ci.biome === BIOME.MOUNTAINS && y > 92); }
+let rainGain = null;
+function weatherTick() {
+  const w = W.weather; if (!w) return;
+  if (--w.timer <= 0) { if (w.rain) { w.rain = 0; w.storm = 0; w.timer = 12000 + (Math.random() * 168000 | 0); } else { w.rain = 1; w.storm = Math.random() < 0.33 ? 1 : 0; w.timer = 12000 + (Math.random() * 12000 | 0); if (G.state === 'playing' && W.dim === 'overworld') toast(w.storm ? 'A thunderstorm rolls in' : 'It starts to rain'); } }
+  w.str += clamp((w.rain ? 1 : 0) - w.str, -0.002, 0.002); if (w.flash > 0) w.flash--;
+  const here = W.dim === 'overworld' && w.str > 0.01 && (G.state === 'playing' || G.state === 'inventory');
+  if (here) {
+    const px = Math.floor(P.x), pz = Math.floor(P.z), exposed = (getLight(px, Math.floor(P.y + 1), pz) >> 4) === 15;
+    if (exposed && P.fire > 0 && w.str > 0.5) P.fire = 0;
+    const n = Math.round(14 * w.str);
+    for (let k = 0; k < n; k++) {
+      const x = P.x + (Math.random() - 0.5) * 20, z = P.z + (Math.random() - 0.5) * 20, bx = Math.floor(x), bz = Math.floor(z);
+      let y = Math.floor(P.y) + 10; if ((getLight(bx, y, bz) >> 4) !== 15) continue;
+      const snow = snowyAt(bx, y, bz);
+      particles.push(snow ? { x, y: y - Math.random() * 6, z, vx: (Math.random() - 0.5) * 0.02, vy: -0.05 - Math.random() * 0.03, vz: 0, layer: TX.snowflake, u: 0.1 + Math.random() * 0.2, v: 0.1 + Math.random() * 0.2, life: 160, size: 0.07, nograv: true }
+        : { x, y: y - Math.random() * 4, z, vx: 0, vy: -0.55, vz: 0, layer: TX.rain, u: Math.random() * 0.4, v: 0.3, life: 26, size: 0.16, nograv: true });
+    }
+    if (w.storm && w.str > 0.8 && Math.random() < 1 / 500) { w.flash = 10; playSound('thunder'); }
+  }
+  if (AC && master) {
+    if (!rainGain) { rainGain = AC.createGain(); rainGain.gain.value = 0; const src = AC.createBufferSource(); src.buffer = NB; src.loop = true; const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200; src.connect(f); f.connect(rainGain); rainGain.connect(master); src.start(); }
+    const want = here ? 0.16 * w.str * G.settings.sound * ((getLight(Math.floor(P.x), Math.floor(P.y + 1), Math.floor(P.z)) >> 4) === 15 ? 1 : 0.35) : 0;
+    rainGain.gain.setTargetAtTime(want, AC.currentTime, 0.5);
+  }
+}
+// sky/fog adjustments for rain; called from render
+function weatherLook(day, top, fog, fogR, far) {
+  const w = W.weather; if (!w || W.dim !== 'overworld' || w.str <= 0) return { day, top, fog, fogR, dark: 0, flash: 0 };
+  const s = w.str, g = [0.42 * day + 0.02, 0.44 * day + 0.02, 0.5 * day + 0.03];
+  const t2 = top.map((c, i) => lerp(c, g[i] * 0.8, s)), f2 = fog.map((c, i) => lerp(c, g[i] * 1.25, s));
+  const flash = w.flash > 7 ? 1 : 0;
+  return { day: flash ? 1 : day * (1 - 0.4 * s), top: flash ? [0.9, 0.9, 1] : t2, fog: flash ? [0.85, 0.85, 0.95] : f2, fogR: [lerp(fogR[0], far * 0.3, s), lerp(fogR[1], far * 0.75, s)], dark: flash ? -11 : 3 * s, flash };
+}
+function dayLabel() { const w = W.weather; const wx = W.dim !== 'overworld' || !w || w.str < 0.3 ? '' : w.storm ? '  ⚡ Storm' : '  🌧 Rain'; return `Day ${W.day + 1}${wx}`; }
 
 boot();
 </script>
