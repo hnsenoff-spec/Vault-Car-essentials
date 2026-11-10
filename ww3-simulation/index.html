@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strategic Command Sim</title>
+<meta name="description" content="Fictional strategic command-center simulation. Not based on real-time data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #0e141c;
+    --panel-2: #121a24;
+    --border: #1f4a55;
+    --border-hi: #2f7d8c;
+    --cyan: #4fd1e0;
+    --cyan-dim: #2a8b97;
+    --text: #d6e2ea;
+    --muted: #8193a2;
+    --faint: #4b5d6b;
+    --amber: #ffb020;
+    --amber-bg: rgba(255,176,32,.12);
+    --red: #ff3b3b;
+    --red-bg: rgba(255,59,59,.14);
+    --land: #121c27;
+    --land-edge: #1f3a47;
+    --us: #6fa8ff; --ru: #c49bff; --cn: #6fe0a4;
+    --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --r: 4px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text); font: 14px/1.45 var(--sans);
+    display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh;
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border); background: #0b1118;
+  }
+  .brand { font: 600 13px/1.2 var(--mono); letter-spacing: .14em; color: var(--cyan); text-transform: uppercase; }
+  .brand small { display: block; color: var(--muted); font: 500 11px var(--sans); letter-spacing: .04em; text-transform: none; }
+  .tb-group { display: flex; align-items: center; gap: 8px; }
+  .tb-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .defcon { display: flex; align-items: center; gap: 10px; }
+  .defcon-cells { display: flex; gap: 3px; }
+  .defcon-cells span {
+    width: 22px; height: 26px; display: grid; place-items: center; font: 600 12px var(--mono);
+    border: 1px solid var(--border); color: var(--faint); border-radius: 2px;
+  }
+  .defcon-cells span.on { color: var(--bg); background: var(--cyan-dim); border-color: var(--cyan); }
+  .defcon-cells span.on.warn { background: var(--amber); border-color: var(--amber); }
+  .defcon-cells span.on.max { background: var(--amber); border-color: #fff3; animation: blink 1s steps(2) infinite; }
+  .defcon-text { font: 600 13px var(--mono); min-width: 13ch; }
+  .defcon-text small { display: block; font: 500 10px var(--mono); color: var(--muted); letter-spacing: .08em; }
+  .clock { font: 700 22px var(--mono); letter-spacing: .04em; color: var(--text); min-width: 8ch; }
+  .clock.paused { color: var(--amber); }
+  .spacer { flex: 1; }
+  @keyframes blink { 50% { opacity: .55; } }
+
+  /* ---------- buttons & inputs ---------- */
+  button, select {
+    font: 600 12px var(--mono); letter-spacing: .04em; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--r);
+    padding: 7px 10px; cursor: pointer; transition: background .12s, border-color .12s, transform .05s;
+  }
+  button:hover:not(:disabled), select:hover { border-color: var(--cyan); background: #16222e; }
+  button:active:not(:disabled) { transform: translateY(1px); background: #0f1a24; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button[aria-pressed="true"] { background: var(--cyan-dim); color: #031014; border-color: var(--cyan); }
+  button[aria-pressed="true"]:hover:not(:disabled) { background: var(--cyan); color: #031014; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .btn-block { width: 100%; text-align: left; display: flex; align-items: center; gap: 8px; padding: 9px 10px; }
+  .btn-block .ico { width: 1.4em; text-align: center; }
+  .btn-danger { border-color: #6b2a2a; }
+  .btn-danger:hover:not(:disabled) { border-color: var(--red); background: #2a1216; }
+  .btn-warn { border-color: #6b5220; }
+  .btn-warn:hover:not(:disabled) { border-color: var(--amber); background: #2a2212; }
+  button.confirming {
+    background: var(--red-bg); border-color: var(--red); color: #ffd6d6;
+    animation: blink .8s steps(2) infinite;
+  }
+  button.confirming.btn-warn { background: var(--amber-bg); border-color: var(--amber); color: #ffe7b8; }
+  .hint { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+  .hint.warn { color: var(--amber); }
+  select { width: 100%; }
+  label.field { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 8px 0 4px; }
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+  .toggle input { accent-color: var(--cyan); width: 16px; height: 16px; }
+
+  /* ---------- layout ---------- */
+  main {
+    display: grid; grid-template-columns: 290px minmax(0,1fr) 380px; gap: 10px; padding: 10px;
+    height: calc(100vh - var(--top-h, 64px) - var(--foot-h, 34px)); min-height: 560px;
+  }
+  .col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .col-left { overflow-y: auto; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 12px; }
+  .panel h2 {
+    margin: 0 0 8px; font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--cyan); display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .panel h2 .sub { color: var(--muted); font-weight: 400; letter-spacing: .04em; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font: 12px var(--mono); }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; }
+  .stack { display: flex; flex-direction: column; gap: 6px; }
+
+  /* ---------- map ---------- */
+  .map-panel { flex: 0 0 auto; display: flex; flex-direction: column; padding: 8px; }
+  .map-wrap { aspect-ratio: 792 / 342; max-height: calc(100vh - var(--top-h, 64px) - var(--foot-h, 34px) - 230px); margin: 0 auto; width: 100%; background: #070b10; border: 1px solid #13303a; border-radius: 2px; }
+  .lead-panel { flex: 1; min-height: 0; overflow-y: auto; }
+  #map { width: 100%; height: 100%; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 11px var(--mono); color: var(--muted); padding: 8px 4px 0; }
+  .legend i { font-style: normal; }
+  .lg-boost { color: #ff9a4d; } .lg-mid { color: #ff5c5c; } .lg-term { color: #ff2a2a; }
+  .grat { stroke: #0f2129; stroke-width: .5; fill: none; }
+  .land { fill: var(--land); stroke: var(--land-edge); stroke-width: .6; }
+  .water { fill: #070b10; stroke: var(--land-edge); stroke-width: .4; }
+  .site-lbl { font: 600 7px var(--mono); fill: var(--muted); letter-spacing: .04em; }
+  .site-lbl.dead { fill: var(--faint); text-decoration: line-through; }
+  .pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2.4s ease-out infinite; }
+  @keyframes pulse { 0% { transform: scale(.6); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
+  .traj { fill: none; stroke: #5a2a2a; stroke-width: .8; stroke-dasharray: 2 3; }
+  .seg { fill: none; stroke-linecap: round; }
+  .seg-boost { stroke: #ff9a4d; stroke-width: 1.4; }
+  .seg-mid { stroke: #ff5c5c; stroke-width: 1.6; }
+  .seg-term { stroke: #ff2a2a; stroke-width: 2.2; filter: url(#glow); }
+  .seg-dead { stroke: #56606a; stroke-width: 1.2; }
+  .m-lbl { font: 600 7px var(--mono); fill: #ffb3b3; }
+  .ldr-lbl { font: 700 7.5px var(--mono); }
+  @media (prefers-reduced-motion: reduce) {
+    .pulse, button.confirming, .defcon-cells span.on.max { animation: none; }
+  }
+
+  /* ---------- feed ---------- */
+  .feed-panel { flex: 1.4; display: flex; flex-direction: column; min-height: 200px; }
+  .feed-head-ctrl { display: flex; gap: 6px; align-items: center; }
+  .feed-head-ctrl button { padding: 4px 8px; font-size: 11px; white-space: nowrap; }
+  #feed {
+    list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0;
+    font: 12px/1.4 var(--mono); border-top: 1px solid #16303a;
+  }
+  #feed li {
+    display: grid; grid-template-columns: auto 1fr; gap: 0 8px; padding: 5px 4px 5px 8px;
+    border-bottom: 1px solid #111d26; border-left: 3px solid var(--faint);
+  }
+  #feed li.new { animation: flashin .9s ease-out; }
+  @keyframes flashin { from { background: #1a2a36; } to { background: transparent; } }
+  #feed time { color: var(--muted); }
+  #feed .badge { font-weight: 700; white-space: nowrap; }
+  #feed .txt { grid-column: 1 / -1; padding-top: 1px; }
+  #feed .conf { display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px dashed currentColor; border-radius: 2px; font-size: 10px; color: var(--amber); }
+  #feed .t-routine { border-left-color: #5d6a75; } #feed .t-routine .badge { color: #9aa7b2; } #feed .t-routine .txt { color: #a9b5bf; }
+  #feed .t-relocation { border-left-color: var(--cyan); } #feed .t-relocation .badge { color: var(--cyan); }
+  #feed .t-warning { border-left-color: var(--amber); background: rgba(255,176,32,.04); } #feed .t-warning .badge { color: var(--amber); }
+  #feed .t-critical { border-left-color: var(--red); background: rgba(255,59,59,.07); } #feed .t-critical .badge { color: var(--red); } #feed .t-critical .txt { color: #ffdcdc; }
+  #feed .t-statement { border-left-color: var(--side, #b8c7ff); background: rgba(184,199,255,.05); }
+  #feed .t-statement .badge { color: var(--side, #b8c7ff); } #feed .t-statement .txt { color: #e6ecf5; font-style: italic; }
+  #feed .conf.spin { color: #ff9a4d; border-style: solid; font-style: normal; }
+  .feed-empty { color: var(--muted); padding: 10px; font: 12px var(--mono); }
+
+  /* ---------- leadership + telemetry ---------- */
+  .lead-table { width: 100%; border-collapse: collapse; font: 11.5px var(--mono); }
+  .lead-table th { text-align: left; color: var(--muted); font-weight: 400; font-size: 10px; letter-spacing: .08em; padding: 2px 4px; }
+  .lead-table td { padding: 4px; border-top: 1px solid #13242d; vertical-align: top; }
+  .lead-table .who { font-weight: 700; white-space: nowrap; }
+  .lead-table .site { display: block; color: var(--muted); font-size: 10px; }
+  .st-secure { color: var(--cyan); } .st-relocating { color: var(--cyan); }
+  .st-comms-degraded { color: var(--amber); } .st-unknown { color: var(--amber); font-weight: 700; }
+  .conf-pill { font-size: 10px; padding: 0 4px; border: 1px solid var(--border); border-radius: 2px; }
+  .conf-pill.low { border-style: dashed; color: var(--amber); border-color: var(--amber); }
+  .tel-panel { flex: 1; display: flex; flex-direction: column; min-height: 160px; }
+  #telemetry { overflow-y: auto; flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; align-content: start; }
+  .mcard { border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--r); padding: 6px 8px; font: 11px/1.5 var(--mono); background: var(--panel-2); }
+  .mcard header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 2px; }
+  .mcard .row { display: flex; justify-content: space-between; gap: 6px; }
+  .mcard .k { color: var(--muted); }
+  .mcard .tti { font-size: 15px; font-weight: 700; }
+  .mcard .bar { height: 3px; background: #1a2530; margin-top: 4px; border-radius: 2px; overflow: hidden; }
+  .mcard .bar i { display: block; height: 100%; background: var(--red); }
+  .mcard.ph-boost { border-left-color: #ff9a4d; } .mcard.ph-mid { border-left-color: #ff5c5c; }
+  .mcard.ph-term { border-left-color: #ff2a2a; background: #1c1015; }
+  .mcard.ph-done { border-left-color: var(--faint); opacity: .7; } .mcard.ph-done .bar i { background: var(--faint); }
+  .mcard .ic-kill { color: var(--cyan); } .mcard .ic-leak { color: var(--red); font-weight: 700; } .mcard .ic-eng { color: var(--amber); }
+  .tel-empty { color: var(--muted); font: 12px var(--mono); padding: 6px 2px; grid-column: 1 / -1; }
+
+  footer { border-top: 1px solid var(--border); padding: 8px 16px; font: 12px var(--mono); color: var(--amber); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer span:last-child { color: var(--muted); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 1200px) { main { grid-template-columns: 260px minmax(0,1fr) 320px; } }
+  @media (max-width: 900px) {
+    html, body { height: auto; }
+    main { grid-template-columns: 1fr; height: auto; min-height: 0; }
+    .col > .panel { flex: none; }
+    .col-center { order: -1; }
+    .map-wrap { max-height: none; }
+    .feed-panel { min-height: 360px; max-height: 60vh; }
+    .tel-panel { min-height: 0; }
+    #telemetry { max-height: 60vh; }
+    .col-left { overflow: visible; }
+    .topbar { gap: 10px 14px; }
+    .spacer { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <div class="brand">Strategic Command<small>Fictional crisis simulation</small></div>
+
+  <div class="defcon" role="status" aria-live="polite" aria-label="Readiness level">
+    <div class="defcon-cells" id="defconCells" aria-hidden="true">
+      <span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+    </div>
+    <div class="defcon-text" id="defconText">DEFCON 5<small>FADE OUT</small></div>
+  </div>
+
+  <div class="tb-group">
+    <span class="tb-label">Sim clock</span>
+    <span class="clock" id="clock" aria-live="off">T+00:00</span>
+  </div>
+
+  <div class="tb-group" role="group" aria-label="Simulation speed">
+    <button id="btnPlay" aria-label="Pause simulation" title="Space">❚❚ PAUSE</button>
+    <button data-speed="1" aria-pressed="true">1×</button>
+    <button data-speed="2" aria-pressed="false">2×</button>
+    <button data-speed="4" aria-pressed="false">4×</button>
+    <button data-speed="8" aria-pressed="false">8×</button>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="tb-group">
+    <label class="tb-label" for="perspective">Perspective</label>
+    <select id="perspective" style="width:auto">
+      <option value="US">▲ US view</option>
+      <option value="RU">■ RU view</option>
+      <option value="CN">◆ PRC view</option>
+      <option value="OBS">◎ Observer (ground truth)</option>
+    </select>
+  </div>
+</header>
+
+<main>
+  <!-- ============ LEFT: controls + continuity ============ -->
+  <section class="col col-left" aria-label="Controls">
+    <div class="panel">
+      <h2>Command Authority</h2>
+      <label class="field" for="controlSide">Acting as</label>
+      <select id="controlSide">
+        <option value="US">▲ US National Command Authority</option>
+        <option value="RU">■ Russian Supreme Command</option>
+        <option value="CN">◆ PRC Central Military Commission</option>
+      </select>
+      <p class="hint" id="controlHint">Follows the perspective selector. Pick Observer to command any side.</p>
+      <dl class="kv" style="margin-top:8px">
+        <dt>Leader</dt><dd id="ownLeader">—</dd>
+        <dt>Perimeter</dt><dd id="ownPerimeter">—</dd>
+      </dl>
+    </div>
+
+    <div class="panel">
+      <h2>Readiness <span class="sub" id="ownDefcon">DEFCON 5</span></h2>
+      <div class="btn-row">
+        <button id="btnEscalate" class="btn-warn">▲ ESCALATE</button>
+        <button id="btnDeescalate">▼ STAND DOWN</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Strike Package</h2>
+      <label class="field" for="targetSel">Target</label>
+      <select id="targetSel"></select>
+      <label class="field">Salvo size</label>
+      <div class="btn-row" role="group" aria-label="Salvo size" id="salvoGroup">
+        <button data-salvo="1" aria-pressed="true">1</button>
+        <button data-salvo="2" aria-pressed="false">2</button>
+        <button data-salvo="3" aria-pressed="false">3</button>
+      </div>
+      <dl class="kv" style="margin-top:8px">
+        <dt>Missiles</dt><dd id="invMissiles">—</dd>
+        <dt>Interceptors</dt><dd id="invInterceptors">—</dd>
+      </dl>
+      <div style="margin-top:8px">
+        <button id="btnStrike" class="btn-block btn-danger" data-confirm="✹ CONFIRM LAUNCH — CLICK AGAIN"><span class="ico">✹</span><span class="lbl">LAUNCH STRIKE</span></button>
+        <p class="hint" id="strikeHint"></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Continuity of Government</h2>
+      <div class="stack">
+        <button id="btnSeal" class="btn-block"><span class="ico">▣</span><span class="lbl">SEAL BUNKER</span></button>
+        <button id="btnAirborne" class="btn-block"><span class="ico">✈</span><span class="lbl">SCRAMBLE AIRBORNE POST</span></button>
+        <button id="btnDecoys" class="btn-block"><span class="ico">⇶</span><span class="lbl">DEPLOY DECOYS</span></button>
+        <button id="btnPerimeter" class="btn-block btn-warn" data-confirm="⚠ CONFIRM ARM — CLICK AGAIN"><span class="ico">⚠</span><span class="lbl">ARM PERIMETER</span></button>
+      </div>
+      <p class="hint">Perimeter: automated retaliation if your leader goes silent.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Simulation</h2>
+      <label class="toggle"><input type="checkbox" id="aiToggle" checked> Adversary AI reacts &amp; retaliates</label>
+      <div class="stack" style="margin-top:8px">
+        <button id="btnInject" class="btn-block btn-warn"><span class="ico">⚑</span><span class="lbl">INJECT ADVERSARY LAUNCH</span></button>
+        <button id="btnReset" class="btn-block" data-confirm="↺ CONFIRM RESET — CLICK AGAIN"><span class="ico">↺</span><span class="lbl">RESET SCENARIO</span></button>
+      </div>
+      <p class="hint">Keys: Space = pause · Esc = cancel pending confirm</p>
+    </div>
+  </section>
+
+  <!-- ============ CENTER: map ============ -->
+  <section class="col col-center" aria-label="World map">
+    <div class="panel map-panel">
+      <h2>Theatre Display <span class="sub" id="mapSub">US view · fog of war on</span></h2>
+      <div class="map-wrap">
+        <svg id="map" viewBox="139 33 792 342" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="mapTitle">
+          <title id="mapTitle">Stylized world map with command sites, leader markers and missile tracks</title>
+          <defs>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="layerBase"></g>
+          <g id="layerSites"></g>
+          <g id="layerDyn"></g>
+        </svg>
+      </div>
+      <div class="legend" aria-label="Map legend">
+        <span>◉ capital (pulsing)</span><span>▣ bunker</span><span>△ airbase</span><span>▴ launch field</span>
+        <span>◎ leader — halo size = uncertainty</span><span>◇ decoy</span>
+        <span><i class="lg-boost">━</i> boost</span><span><i class="lg-mid">━</i> midcourse</span><span><i class="lg-term">━</i> terminal</span>
+        <span>✕ intercepted</span><span>✹ detonation</span>
+      </div>
+    </div>
+    <div class="panel lead-panel">
+      <h2>Leadership Track</h2>
+      <table class="lead-table">
+        <thead><tr><th scope="col">Entity</th><th scope="col">Location</th><th scope="col">Status</th><th scope="col">Conf.</th></tr></thead>
+        <tbody id="leadBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ RIGHT: comms + telemetry ============ -->
+  <section class="col col-right" aria-label="Comms and telemetry">
+    <div class="panel feed-panel">
+      <h2>Leadership Comms <span class="feed-head-ctrl">
+        <span class="sub" id="feedCount">0</span>
+        <button id="btnStmt" aria-pressed="true" title="Show or hide public statements from each capital" aria-label="Show capital statements">❝ STMT</button>
+        <button id="btnFeedPause" aria-pressed="false" aria-label="Hold scroll">❚❚ HOLD</button>
+      </span></h2>
+      <ul id="feed" role="log" aria-live="polite" aria-relevant="additions" aria-label="Radio chatter, newest first"></ul>
+    </div>
+
+
+    <div class="panel tel-panel">
+      <h2>Telemetry <span class="sub" id="telCount">0 tracks</span></h2>
+      <div id="telemetry" aria-live="off"></div>
+    </div>
+  </section>
+</main>
+
+<footer id="footer">
+  <span>⚠ Fictional simulation. Not based on real-time data.</span>
+  <span>Role titles and codenames only · all state generated in-browser</span>
+</footer>
+
+<div class="sr-only" aria-live="assertive" id="srAnnounce"></div>
+
+<script src="leaders.js"></script>
+<script src="worldmap.js"></script>
+<script src="sim.js"></script>
+</body>
+</html>
