@@ -21,7 +21,7 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | Shift | Sneak (won't walk off edges) |
 | R or double-tap W | Sprint (Ctrl is not used because Ctrl+W closes the browser tab) |
 | Left click (hold) | Mine |
-| Right click | Place block, use bucket/hoe/seeds/shears, open table/furnace/chest, sleep in a bed, equip armor |
+| Right click | Place block, use bucket/hoe/seeds/shears, open table/furnace/chest, open or close a door, sleep in a bed, equip armor, feed an animal |
 | Right click (hold) | Eat food, draw a bow (release to fire) |
 | Middle click | Pick block |
 | 1–9, wheel | Hotbar |
@@ -43,7 +43,7 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | Mining | Break time = hardness × 30 (or 100 without the right tool) ÷ tool speed, ×5 slower underwater or airborne; tool tiers gate ores (stone needs wood, iron needs stone, gold/diamond need iron, obsidian needs diamond); tool durability |
 | Fluids | Water (5-tick) and lava (30-tick) with source/flow levels, falling columns, flow toward the nearest drop, infinite water sources, lava + water makes obsidian, cobblestone or stone |
 | Blocks | Falling sand and gravel, leaf decay with sapling drops, saplings that grow into trees, grass spreading, cactus growth |
-| Crafting | 2×2 inventory grid and 3×3 table, shaped (with mirroring) and shapeless recipes: planks, sticks, table, torches, furnace, chest, wood/stone/iron/diamond pickaxes, axes and shovels, bucket, sandstone, stone bricks, metal blocks |
+| Crafting | 2×2 inventory grid and 3×3 table, shaped (with mirroring) and shapeless recipes: planks, sticks, table, torches, furnace, chest, wood/stone/iron/diamond pickaxes, axes and shovels, bucket, sandstone, stone bricks, metal blocks, slabs, stairs, fences, doors, mossy cobblestone (cobblestone + grass) |
 | Mobs | Pigs, cows, sheep and chickens spawn in herds on grass and are saved with the world; they wander, avoid cliffs, panic when hit and follow you if you hold wheat or seeds. Zombies, skeletons and spiders spawn in darkness (block light 0, sky light ≤ 7) 24–64 blocks away, chase on sight, and despawn far away. Zombies and skeletons burn in sunlight; spiders climb walls, pounce and are neutral in daylight; skeletons strafe and shoot arrows with gravity |
 | Combat | Swords 4/5/6/7 damage (wood→diamond), other tools less, fists 1; falling crits ×1.5; knockback (stronger when sprinting); 10-tick invulnerability; bow with draw power curve, full-draw crits, arrows that stick and can be picked up |
 | Hunger | 20 food points plus saturation and exhaustion (sprinting, jumping, mining, fighting, healing). Fast healing at full food, slow at 18+, starvation at 0 (stops at 10 HP on Easy, 1 HP on Normal, kills on Hard). Can't sprint at 6 or below. Eating takes 1.6 s |
@@ -52,13 +52,18 @@ Then open http://127.0.0.1:8000/blockhaven/ from the repo root. The game needs a
 | Farming | Hoe turns grass/dirt into farmland, which hydrates within 4 blocks of water and dries back to dirt; wheat grows through 8 stages on random ticks; tall grass drops seeds; landing on farmland can trample it |
 | Beds & ladders | Beds (3 wool + 3 planks) set your respawn point and skip the night when no monsters are within 8 blocks; ladders let you climb, and sneaking holds you in place |
 | Drops | Leather, feathers, wool (or shear sheep for 1–3), string, bones, arrows, rotten flesh; gravel drops flint |
-| Villages | Generate on open ground in plains, desert and taiga (oak, sandstone or spruce style), roughly one every 300–500 blocks: a well, gravel roads, houses with beds, crafting tables, furnaces and loot chests, wheat farms with water channels, and lamp posts. New worlds start on a village street; when you load a world away from one, a message gives the distance and direction, and F3 shows its coordinates |
+| Villages | Generate on open ground in plains, desert and taiga (oak, sandstone or spruce style), roughly one every 300–500 blocks: a fenced well, gravel roads, houses with doors, stepped stair roofs, beds, crafting tables, furnaces and loot chests, wheat farms with water channels, and fence lamp posts. New worlds start on a village street; when you load a world away from one, a message gives the distance and direction, and F3 shows its coordinates |
 | Villagers | Farmers, smiths, butchers and masons live in the houses, stay near home and flee monsters. Right-click one to trade; gold ingots are the currency (sell wheat, meat, coal, iron or cobblestone; buy bread, steak, iron tools and armor, stone bricks, glass, torches) |
 | Emberdeep | A cavern dimension under a bedrock ceiling with a lava sea at y=31, ashrock, cinder sand beaches, hanging glowshard clusters and fire-proof Ashen that set you alight. Build a 4×5 obsidian frame (corners optional, up to 21×21) and light it with a Fire Striker (iron ingot + flint). One block there equals 8 in the Overworld, and a return gate is built for you if none is near. Water evaporates and beds don't work |
 | Skyreach | Floating islands over the void with skystone, skygrass, skyleaf trees, sky crystal ore (iron pickaxe or better) and sky shrines holding loot. Reach it with a frame of glowshard blocks (4 glow dust each, mined in Emberdeep) lit with the Fire Striker |
 | Crystal gear | Sky crystals craft the top tool tier (mining speed 10, 2031 uses, crystal sword deals 8) and crystal lanterns |
 | Furnace | 10 s per item, fuel values (coal 80 s, planks 15 s, lava bucket 1000 s), lights up while burning |
+| Slabs & stairs | Oak, spruce, birch, cobblestone, stone brick and sandstone slabs (3 blocks → 6) and stairs (6 blocks → 4). Slabs place in the top or bottom half depending on where you click and two halves make a full block; stairs face away from you and go upside down when placed under a block or on the upper half of a face. The classic 0.6-block step height lets you walk up them without jumping |
+| Fences & doors | Oak, spruce and birch fences (planks + sticks) connect to neighbours and stand 1.5 blocks high so nothing jumps them; torches sit on top. Oak and spruce doors (6 planks → 3) are two blocks tall, open and close with a right-click, and stop monsters when shut |
+| Dungeons | Cobblestone rooms with mossy floors are carved into caves underground (up to one per chunk, only where they open onto a cave). Each holds a monster spawner and 1–2 loot chests (iron, gold, bread, string, bones, arrows, armor, a rare diamond) |
+| Spawners | A caged spawner wakes when you are within 16 blocks and every 10–40 s spawns up to 4 zombies, skeletons or spiders in the dark around it, up to 6 nearby. Light the room above level 7 to stop it, or mine it with a pickaxe (it drops nothing) |
+| Breeding | Right-click two cows, sheep or pigs with wheat, or two chickens with seeds, and they walk together and produce a baby. Babies are half size with big heads, follow adults, grow up in 20 minutes (faster when fed) and drop nothing. Parents need 5 minutes before they can breed again |
 
 ## Not included
 
-The full game is far larger than this. Missing: XP and enchanting, brewing, redstone, dungeons, mineshafts and other structures, bosses, boats and minecarts, doors, stairs, slabs and fences, dyes, breeding, weather, multiplayer. Creepers, Endermen, the Nether and the End are not copied: Blockhaven's dimensions, mobs and portals have their own designs.
+The full game is far larger than this. Missing: XP and enchanting, brewing, redstone, mineshafts, strongholds and temples, bosses, boats and minecarts, fence gates and trapdoors, dyes, weather, multiplayer. Creepers, Endermen, the Nether and the End are not copied: Blockhaven's dimensions, mobs and portals have their own designs.
